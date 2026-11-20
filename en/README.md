@@ -1,4 +1,4 @@
-<!-- mirror of README.md sha256:6f59a4b6f186fb1ec772a1b561343c96e2cbf58bbd2974a3ed30ded3197ff94f; edit the Portuguese source first -->
+<!-- mirror of README.md sha256:85be4e809886386f5f90774b6143b95041c42663ade757de8d2239ddea270238; edit the Portuguese source first -->
 # project-engineering: the factory
 
 [![ci](https://github.com/rodrigobaran/project-engineering/actions/workflows/ci.yml/badge.svg)](https://github.com/rodrigobaran/project-engineering/actions/workflows/ci.yml)
@@ -24,6 +24,7 @@ Architecture decisions live in `docs/decisoes/`.
 | `papeis/` | Prompts and schemas for triage, planner, implementer, reviewer | Yes, into `.fabrica/papeis/` |
 | `fabrica/` | Sync, drift check, class computation, authorship and forbidden-terms checks | No: it runs from here |
 | `descoberta/` | Schema, rules and fictitious example of the discovery dossier | No: real dossiers stay outside this repository |
+| `precificacao/` | Probabilistic pricing simulator, with a fictitious estimate and history | No |
 | `docs/decisoes/` | The factory's ADRs | No |
 | `en/` | English mirror of every `.md`, with the hash of the original | No |
 
@@ -40,6 +41,7 @@ python -m fabrica termos . --intervalo origin/main..HEAD   # list in $TERMOS_PRO
 python -m fabrica espelho conferir .        # fails if any translation in en/ fell behind
 python -m fabrica espelho carimbar . <file.md>   # records the hash after updating the translation
 python -m fabrica dossie conferir <dossier.json> --portao   # discovery rules and gate
+python -m fabrica preco simular <estimate.toml> --orcamento 25000   # P50, P80, P95 and scope
 ```
 
 Local verification: `scripts/verificar` (ruff, installed from `.github/requisitos-ci.txt`, and the check of
