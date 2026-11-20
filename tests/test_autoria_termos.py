@@ -161,6 +161,19 @@ class TestRepositorioReal(unittest.TestCase):
         self.assertIn("nome do arquivo sigiloso-ltda.txt", saida)
         self.assertIn("mensagem do commit", saida)
 
+    def test_termo_no_titulo_ou_corpo_do_pr_pelo_evento(self):
+        evento = self.raiz.parent / f"{self.raiz.name}-evento.json"
+        evento.write_text('{"pull_request": {"title": "feat: x", "body": "cita a Sigiloso Ltda"}}', encoding="utf-8")
+        self.addCleanup(evento.unlink)
+        codigo, saida = self.rodar("termos", str(self.raiz), "--evento", str(evento),
+                                   env={"TERMOS_PROIBIDOS": "sigiloso\n"})
+        self.assertEqual(codigo, 1)
+        self.assertIn("[termo 1] body do PR:1", saida)
+        evento.write_text('{"after": "abc"}', encoding="utf-8")  # push: sem PR, nada a conferir
+        codigo, _ = self.rodar("termos", str(self.raiz), "--evento", str(evento),
+                               env={"TERMOS_PROIBIDOS": "sigiloso\n"})
+        self.assertEqual(codigo, 0)
+
     def test_termos_sem_secret_falha_fechado(self):
         codigo, _ = self.rodar("termos", str(self.raiz), env={"TERMOS_PROIBIDOS": ""})
         self.assertEqual(codigo, 2)
