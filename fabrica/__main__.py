@@ -11,6 +11,8 @@
     python -m fabrica dossie conferir <dossie.json> [--portao]
     python -m fabrica dossie hash <dossie.json>
     python -m fabrica dossie renderizar <dossie.json>
+    python -m fabrica preco simular <estimativa.toml> [--orcamento VALOR]
+    python -m fabrica preco calibrar <historico.csv>
 
 Em `classe`, <projeto> é a raiz do repositório. Com --arquivos, cada arquivo conta como modificado:
 remoções e renames só aparecem com --base.
@@ -22,7 +24,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import autoria, classe, dossie, espelho, git, projeto, sincronizar, termos
+from . import autoria, classe, dossie, espelho, git, preco, projeto, sincronizar, termos
 from .padroes import normalizar
 
 
@@ -124,6 +126,50 @@ def _dossie(a: argparse.Namespace) -> int:
     return 1 if a.portao and not r.portao_aberto else 0
 
 
+def _numero(valor: float, casas: int = 0) -> str:
+    return f"{valor:,.{casas}f}".replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+
+
+def _preco(a: argparse.Namespace) -> int:
+    if a.acao == "calibrar":
+        print("| Categoria | Itens | Cobertura do P80 | Real / provável (mediana) | Situação |")
+        print("|---|---|---|---|---|")
+        for c in preco.calibrar(a.arquivo):
+            situacao = "usar a razão medida" if c.usar_razao else f"palpite (menos de {preco.MINIMO_CALIBRACAO} itens)"
+            print(f"| {c.categoria} | {c.itens} | {c.cobertura_p80:.0%} | {_numero(c.razao_mediana, 2)} | {situacao} |")
+        return 0
+    modelo = preco.ler(a.arquivo)
+    sim = preco.simular(modelo)
+    horas, custo = preco.faixas(sim.horas()), preco.faixas(sim.custo())
+    print(f"{modelo.rodadas} rodadas, semente {modelo.semente}, fator de projeto com sigma {modelo.sigma_fator}")
+    print()
+    print("| Faixa | Horas | Custo | Prazo (semanas) |")
+    print("|---|---|---|---|")
+    for p, rotulo in zip(preco.PERCENTIS, ("enxuto", "recomendado", "seguro"), strict=True):
+        print(f"| P{p} ({rotulo}) | {_numero(horas[p])} | {modelo.moeda} {_numero(custo[p])} "
+              f"| {_numero(horas[p] / modelo.horas_por_semana, 1)} |")
+    print()
+    print("Onde a incerteza mora (fração da variância das horas):")
+    for nome, fracao in preco.contribuicoes(sim):
+        print(f"- {nome}: {fracao:.0%}")
+    if a.orcamento is not None:
+        e = preco.escopo_para_orcamento(sim, a.orcamento)
+        print()
+        if not e.cabe:
+            print(f"O essencial não cabe: P80 do essencial = {modelo.moeda} {_numero(e.p80)}, "
+                  f"orçamento = {modelo.moeda} {_numero(a.orcamento)}.")
+            return 1
+        print(f"Com {modelo.moeda} {_numero(a.orcamento)}, entram com 80% de chance (P80 = {modelo.moeda} "
+              f"{_numero(e.p80)}):")
+        for nome in e.dentro:
+            print(f"- {nome}")
+        if e.fora:
+            print("Ficam fora:")
+            for nome in e.fora:
+                print(f"- {nome}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="fabrica")
     sub = ap.add_subparsers(dest="comando", required=True)
@@ -162,6 +208,11 @@ def main(argv: list[str] | None = None) -> int:
     do.add_argument("arquivo", type=Path)
     do.add_argument("--portao", action="store_true", help="em conferir, falha também com o portão fechado")
 
+    pr = sub.add_parser("preco", help="simula faixas de preço ou mede a calibração")
+    pr.add_argument("acao", choices=("simular", "calibrar"))
+    pr.add_argument("arquivo", type=Path, help="estimativa .toml (simular) ou histórico .csv (calibrar)")
+    pr.add_argument("--orcamento", type=float, help="em simular, escolhe o escopo cujo P80 cabe neste valor")
+
     a = ap.parse_args(argv)
     try:
         if a.comando == "sincronizar":
@@ -178,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
             return _espelho(a)
         if a.comando == "dossie":
             return _dossie(a)
+        if a.comando == "preco":
+            return _preco(a)
         d = sincronizar.conferir(a.projeto)
         for rotulo, itens in (("alterado", d.alterados), ("faltando", d.faltando), ("sobrando", d.sobrando)):
             for item in itens:
@@ -188,7 +241,7 @@ def main(argv: list[str] | None = None) -> int:
         print("OK: .fabrica/ igual à versão registrada")
         return 0
     except (projeto.ErroProjeto, sincronizar.ErroSincronizacao, classe.ErroClasse, git.ErroGit,
-            termos.ErroTermos, espelho.ErroEspelho, dossie.ErroDossie, ValueError) as e:
+            termos.ErroTermos, espelho.ErroEspelho, dossie.ErroDossie, preco.ErroPreco, ValueError) as e:
         print(f"erro: {e}", file=sys.stderr)
         return 2
 

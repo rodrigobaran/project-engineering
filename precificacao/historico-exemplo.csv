@@ -1,0 +1,17 @@
+item,categoria,otimista,provavel,pessimista,real
+fluxo-01,fluxo,10,16,32,30
+fluxo-02,fluxo,12,20,40,31
+fluxo-03,fluxo,6,10,20,17
+fluxo-04,fluxo,6,10,20,13
+fluxo-05,fluxo,6,10,20,18
+fluxo-06,fluxo,8,12,24,11
+fluxo-07,fluxo,12,20,40,26
+fluxo-08,fluxo,8,12,24,12
+fluxo-09,fluxo,12,20,40,19
+fluxo-10,fluxo,6,10,20,18
+fluxo-11,fluxo,6,10,20,15
+fluxo-12,fluxo,12,20,40,19
+integracao-01,integracao,8,14,30,19
+integracao-02,integracao,8,14,30,26
+integracao-03,integracao,8,14,30,17
+integracao-04,integracao,8,14,30,23

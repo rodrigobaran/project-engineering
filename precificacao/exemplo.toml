@@ -1,0 +1,71 @@
+# Estimativa fictícia do dossiê descoberta/exemplo.json. Taxa, pesos e sigma são ilustrativos:
+# os valores calibrados de verdade são ativos comerciais e não ficam neste repositório.
+moeda = "R$"
+taxa_hora = 150
+horas_por_semana = 30
+rodadas = 10000
+semente = 1
+
+[fator_projeto]
+sigma = 0.20  # lognormal com mediana 1: o mesmo cliente e a mesma equipe afetam todos os itens
+
+[riscos]  # quanto cada risco alarga a distância entre provável e pessimista
+pergunta_aberta = 0.5
+integracao_sem_documentacao = 0.6
+dado_pessoal = 0.3
+dinheiro = 0.3
+
+[[itens]]
+nome = "Infraestrutura, CI e publicação"
+categoria = "infraestrutura"
+prioridade = "essencial"
+horas = [10, 16, 28]
+
+[[itens]]
+nome = "Cadastro de clientes e permissões"
+categoria = "fluxo"
+prioridade = "essencial"
+horas = [12, 20, 36]
+riscos = ["dado_pessoal"]
+
+[[itens]]
+nome = "Encomenda e ciclo de vida"
+categoria = "fluxo"
+prioridade = "essencial"
+horas = [16, 24, 40]
+
+[[itens]]
+nome = "Pagamento por Pix com confirmação idempotente"
+categoria = "integracao"
+prioridade = "essencial"
+horas = [14, 24, 48]
+riscos = ["dinheiro", "pergunta_aberta"]
+
+[[itens]]
+nome = "Conciliação diária"
+categoria = "fluxo"
+prioridade = "importante"
+horas = [8, 12, 24]
+riscos = ["dinheiro"]
+
+[[itens]]
+nome = "Tela da atendente"
+categoria = "fluxo"
+prioridade = "importante"
+horas = [10, 16, 26]
+
+[[itens]]
+nome = "Exportação dos dados pelo cliente"
+categoria = "fluxo"
+prioridade = "desejavel"
+horas = [4, 8, 14]
+riscos = ["dado_pessoal"]
+
+[[custos]]
+nome = "Tokens da fábrica"
+valor = [300, 600, 1500]
+acompanha_fator = true
+
+[[custos]]
+nome = "Hospedagem no primeiro ano"
+valor = [600, 900, 1500]
