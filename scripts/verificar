@@ -3,9 +3,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if ! command -v ruff >/dev/null 2>&1; then
-  echo "erro: ruff não instalado (pip install ruff). Não pulo o lint em silêncio." >&2
+  echo "erro: ruff não instalado (python -m pip install --require-hashes --no-deps -r .github/requisitos-ci.txt)." >&2
+  echo "Não pulo o lint em silêncio." >&2
   exit 1
 fi
 ruff check fabrica tests
 python3 -m compileall -q fabrica
+python3 -m fabrica espelho conferir .
 echo "verificar: OK"

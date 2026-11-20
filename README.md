@@ -8,6 +8,8 @@ independente registra no PR.
 
 Estado: v0, experimento. Este README descreve só o que já existe e o que a CI confere.
 
+English: [en/README.md](en/README.md). O português é a fonte; a CI aponta tradução desatualizada.
+
 ## Como este repositório cresce
 
 Cada commit é proposto antes, com o conteúdo e as alternativas, e só entra com o ok do Rodrigo, por PR.
@@ -21,6 +23,7 @@ As decisões de arquitetura ficam em `docs/decisoes/`.
 | `papeis/` | Prompts e schemas de triagem, planejador, implementador, revisor | Sim, em `.fabrica/papeis/` |
 | `fabrica/` | Sincronização, conferência de deriva, cálculo de classe, checks de autoria e de termos | Não: roda a partir daqui |
 | `docs/decisoes/` | ADRs da fábrica | Não |
+| `en/` | Espelho em inglês de cada `.md`, com o hash do original | Não |
 
 ## Ferramentas
 
@@ -32,15 +35,18 @@ python -m fabrica conferir <projeto>        # falha se .fabrica/ foi editada à 
 python -m fabrica classe <projeto> --base origin/main --declarada B
 python -m fabrica autoria . --intervalo origin/main..HEAD --pessoa <e-mail>
 python -m fabrica termos . --intervalo origin/main..HEAD   # lista em $TERMOS_PROIBIDOS
+python -m fabrica espelho conferir .        # falha se alguma tradução em en/ ficou para trás
+python -m fabrica espelho carimbar . <arquivo.md>   # grava o hash depois de atualizar a tradução
 ```
 
-Verificação local: `scripts/verificar` (ruff, instalado por `.github/requisitos-ci.txt`) e `scripts/testar`.
+Verificação local: `scripts/verificar` (ruff, instalado por `.github/requisitos-ci.txt`, e conferência do
+espelho `en/`) e `scripts/testar`.
 
 ## CI
 
 | Job | O que bloqueia |
 |---|---|
-| testes (3.11 e 3.13) | Lint e testes |
+| testes (3.11 e 3.13) | Lint, tradução desatualizada em `en/` e testes |
 | autoria (N11) | Commit com agente como autor, committer ou coautor |
 | termos proibidos | Nome de cliente ou de projeto privado em arquivo, commit ou PR. A lista é um secret; o log mostra só o número do termo |
 
