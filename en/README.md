@@ -1,4 +1,4 @@
-<!-- mirror of README.md sha256:2aed130497b6436e0e314a42519a21c02d1391a764107fc03fd8155797df7fa6; edit the Portuguese source first -->
+<!-- mirror of README.md sha256:6f59a4b6f186fb1ec772a1b561343c96e2cbf58bbd2974a3ed30ded3197ff94f; edit the Portuguese source first -->
 # project-engineering: the factory
 
 [![ci](https://github.com/rodrigobaran/project-engineering/actions/workflows/ci.yml/badge.svg)](https://github.com/rodrigobaran/project-engineering/actions/workflows/ci.yml)
@@ -23,6 +23,7 @@ Architecture decisions live in `docs/decisoes/`.
 | `camadas/` | What to plan, review and test per kind of software | Yes, the project's layer becomes `.fabrica/camada.md` |
 | `papeis/` | Prompts and schemas for triage, planner, implementer, reviewer | Yes, into `.fabrica/papeis/` |
 | `fabrica/` | Sync, drift check, class computation, authorship and forbidden-terms checks | No: it runs from here |
+| `descoberta/` | Schema, rules and fictitious example of the discovery dossier | No: real dossiers stay outside this repository |
 | `docs/decisoes/` | The factory's ADRs | No |
 | `en/` | English mirror of every `.md`, with the hash of the original | No |
 
@@ -38,6 +39,7 @@ python -m fabrica autoria . --intervalo origin/main..HEAD --pessoa <e-mail>
 python -m fabrica termos . --intervalo origin/main..HEAD   # list in $TERMOS_PROIBIDOS
 python -m fabrica espelho conferir .        # fails if any translation in en/ fell behind
 python -m fabrica espelho carimbar . <file.md>   # records the hash after updating the translation
+python -m fabrica dossie conferir <dossier.json> --portao   # discovery rules and gate
 ```
 
 Local verification: `scripts/verificar` (ruff, installed from `.github/requisitos-ci.txt`, and the check of

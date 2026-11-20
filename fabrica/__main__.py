@@ -8,6 +8,9 @@
     python -m fabrica termos <repo> [--intervalo BASE..HEAD] [--evento $GITHUB_EVENT_PATH] [--texto-env NOME]
     python -m fabrica espelho conferir <repo>
     python -m fabrica espelho carimbar <repo> <arquivo.md> [...]
+    python -m fabrica dossie conferir <dossie.json> [--portao]
+    python -m fabrica dossie hash <dossie.json>
+    python -m fabrica dossie renderizar <dossie.json>
 
 Em `classe`, <projeto> é a raiz do repositório. Com --arquivos, cada arquivo conta como modificado:
 remoções e renames só aparecem com --base.
@@ -19,7 +22,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import autoria, classe, espelho, git, projeto, sincronizar, termos
+from . import autoria, classe, dossie, espelho, git, projeto, sincronizar, termos
 from .padroes import normalizar
 
 
@@ -96,6 +99,31 @@ def _espelho(a: argparse.Namespace) -> int:
     return 0
 
 
+def _dossie(a: argparse.Namespace) -> int:
+    d = dossie.ler(a.arquivo)
+    r = dossie.conferir(d)
+    if a.acao == "hash":
+        if not r.valido:
+            raise dossie.ErroDossie("dossiê inválido não tem hash de versão; rode `dossie conferir`")
+        print(dossie.hash_canonico(d))
+        return 0
+    if a.acao == "renderizar":
+        if not r.valido:
+            raise dossie.ErroDossie("dossiê inválido não é renderizado; rode `dossie conferir`")
+        print(dossie.renderizar(d, r), end="")
+        return 0
+    for erro in r.erros:
+        print(f"[erro] {erro}")
+    for bloqueio in r.bloqueios:
+        print(f"[portão] {bloqueio}")
+    if not r.valido:
+        print(f"Dossiê inválido: {len(r.erros)} erro(s).")
+        return 1
+    print(f"Dossiê válido. {len(r.perguntas)} pergunta(s) aberta(s). "
+          f"Portão {'aberto' if r.portao_aberto else 'fechado'}.")
+    return 1 if a.portao and not r.portao_aberto else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="fabrica")
     sub = ap.add_subparsers(dest="comando", required=True)
@@ -129,6 +157,11 @@ def main(argv: list[str] | None = None) -> int:
     es.add_argument("repo", type=Path)
     es.add_argument("arquivos", nargs="*", help="fontes em português a carimbar (só com carimbar)")
 
+    do = sub.add_parser("dossie", help="confere, identifica ou renderiza um dossiê de descoberta")
+    do.add_argument("acao", choices=("conferir", "hash", "renderizar"))
+    do.add_argument("arquivo", type=Path)
+    do.add_argument("--portao", action="store_true", help="em conferir, falha também com o portão fechado")
+
     a = ap.parse_args(argv)
     try:
         if a.comando == "sincronizar":
@@ -143,6 +176,8 @@ def main(argv: list[str] | None = None) -> int:
             return _termos(a)
         if a.comando == "espelho":
             return _espelho(a)
+        if a.comando == "dossie":
+            return _dossie(a)
         d = sincronizar.conferir(a.projeto)
         for rotulo, itens in (("alterado", d.alterados), ("faltando", d.faltando), ("sobrando", d.sobrando)):
             for item in itens:
@@ -153,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
         print("OK: .fabrica/ igual à versão registrada")
         return 0
     except (projeto.ErroProjeto, sincronizar.ErroSincronizacao, classe.ErroClasse, git.ErroGit,
-            termos.ErroTermos, espelho.ErroEspelho, ValueError) as e:
+            termos.ErroTermos, espelho.ErroEspelho, dossie.ErroDossie, ValueError) as e:
         print(f"erro: {e}", file=sys.stderr)
         return 2
 
