@@ -18,4 +18,4 @@ Este repositório é o portão dos outros: mudança aqui é sempre classe A e pr
   sincronização. Diga no PR quais projetos isso afeta.
 - Decisões em `docs/decisoes/`.
 
-As regras para o software que a fábrica cria são outras e ficam em `padrao/`, quando esse commit entrar.
+As regras para o software que a fábrica cria são outras e ficam em `padrao/`.

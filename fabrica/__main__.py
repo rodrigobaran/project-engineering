@@ -6,6 +6,8 @@
     python -m fabrica classe <projeto> --arquivos src/a.py docs/x.md [--declarada B]
     python -m fabrica autoria <repo> --intervalo BASE..HEAD --pessoa email [--pessoa email ...]
     python -m fabrica termos <repo> [--intervalo BASE..HEAD] [--evento $GITHUB_EVENT_PATH] [--texto-env NOME]
+    python -m fabrica espelho conferir <repo>
+    python -m fabrica espelho carimbar <repo> <arquivo.md> [...]
 
 Em `classe`, <projeto> é a raiz do repositório. Com --arquivos, cada arquivo conta como modificado:
 remoções e renames só aparecem com --base.
@@ -17,7 +19,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import autoria, classe, git, projeto, sincronizar, termos
+from . import autoria, classe, espelho, git, projeto, sincronizar, termos
 from .padroes import normalizar
 
 
@@ -75,6 +77,25 @@ def _termos(a: argparse.Namespace) -> int:
     return 0
 
 
+def _espelho(a: argparse.Namespace) -> int:
+    if a.acao == "carimbar":
+        if not a.arquivos:
+            raise espelho.ErroEspelho("diga quais fontes carimbar, por exemplo: fabrica espelho carimbar . README.md")
+        for fonte in a.arquivos:
+            print(f"carimbado: {espelho.carimbar(a.repo, fonte)}")
+        return 0
+    r = espelho.conferir(a.repo)
+    for rotulo, itens in (("sem tradução", r.faltando), ("desatualizado", r.desatualizados),
+                          ("sem cabeçalho de origem", r.sem_cabecalho), ("órfão", r.orfaos)):
+        for item in itens:
+            print(f"[{rotulo}] {item}")
+    if not r.limpo:
+        print("Espelho en/: traduza ou atualize os arquivos acima e rode `fabrica espelho carimbar . <fonte>`.")
+        return 1
+    print("Espelho en/: OK")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="fabrica")
     sub = ap.add_subparsers(dest="comando", required=True)
@@ -103,6 +124,11 @@ def main(argv: list[str] | None = None) -> int:
     te.add_argument("--evento", type=Path, help="payload do evento do Actions; confere título e corpo do PR")
     te.add_argument("--texto-env", action="append", help="também confere o texto desta variável; repita")
 
+    es = sub.add_parser("espelho", help="confere ou carimba as traduções em en/")
+    es.add_argument("acao", choices=("conferir", "carimbar"))
+    es.add_argument("repo", type=Path)
+    es.add_argument("arquivos", nargs="*", help="fontes em português a carimbar (só com carimbar)")
+
     a = ap.parse_args(argv)
     try:
         if a.comando == "sincronizar":
@@ -115,6 +141,8 @@ def main(argv: list[str] | None = None) -> int:
             return _autoria(a)
         if a.comando == "termos":
             return _termos(a)
+        if a.comando == "espelho":
+            return _espelho(a)
         d = sincronizar.conferir(a.projeto)
         for rotulo, itens in (("alterado", d.alterados), ("faltando", d.faltando), ("sobrando", d.sobrando)):
             for item in itens:
@@ -125,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
         print("OK: .fabrica/ igual à versão registrada")
         return 0
     except (projeto.ErroProjeto, sincronizar.ErroSincronizacao, classe.ErroClasse, git.ErroGit,
-            termos.ErroTermos, ValueError) as e:
+            termos.ErroTermos, espelho.ErroEspelho, ValueError) as e:
         print(f"erro: {e}", file=sys.stderr)
         return 2
 
