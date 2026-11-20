@@ -6,6 +6,8 @@ Regras:
 - `?` casa um caractere que não seja `/`.
 - Padrão terminado em `/` casa o diretório e tudo dentro dele.
 - Caminhos são sempre relativos à raiz do repositório, com `/`.
+- `ignorar_caixa=True` casa sem diferenciar maiúsculas: no Windows e no macOS, `agents.md` e
+  `AGENTS.md` são o mesmo arquivo.
 """
 from __future__ import annotations
 
@@ -14,7 +16,7 @@ from functools import lru_cache
 
 
 @lru_cache(maxsize=512)
-def _compilar(padrao: str) -> re.Pattern[str]:
+def _compilar(padrao: str, ignorar_caixa: bool) -> re.Pattern[str]:
     if padrao.endswith("/"):
         padrao += "**"
     partes: list[str] = []
@@ -36,13 +38,16 @@ def _compilar(padrao: str) -> re.Pattern[str]:
         else:
             partes.append(re.escape(c))
             i += 1
-    return re.compile("".join(partes) + r"\Z")
+    return re.compile("".join(partes) + r"\Z", re.IGNORECASE if ignorar_caixa else 0)
 
 
-def casa(caminho: str, padrao: str) -> bool:
-    caminho = caminho.replace("\\", "/").removeprefix("./")
-    return _compilar(padrao).match(caminho) is not None
+def normalizar(caminho: str) -> str:
+    return caminho.replace("\\", "/").removeprefix("./")
 
 
-def casa_algum(caminho: str, padroes: list[str] | tuple[str, ...]) -> bool:
-    return any(casa(caminho, p) for p in padroes)
+def casa(caminho: str, padrao: str, *, ignorar_caixa: bool = False) -> bool:
+    return _compilar(padrao, ignorar_caixa).match(normalizar(caminho)) is not None
+
+
+def casa_algum(caminho: str, padroes: list[str] | tuple[str, ...], *, ignorar_caixa: bool = False) -> bool:
+    return any(casa(caminho, p, ignorar_caixa=ignorar_caixa) for p in padroes)

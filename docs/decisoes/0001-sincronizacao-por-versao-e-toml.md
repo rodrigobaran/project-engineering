@@ -1,6 +1,6 @@
 # 0001. Conteúdo compartilhado sincronizado por versão, configuração em TOML, só biblioteca padrão
 
-Data: 2026-11-20 · Estado: proposta (aprovação no PR)
+Data: 2026-11-20 · Estado: aceita (PR #4)
 
 ## Contexto
 A ideia inicial era ter pastas como `/docs-pj` e `/agents-pj` copiadas de projeto em projeto. Cópia
