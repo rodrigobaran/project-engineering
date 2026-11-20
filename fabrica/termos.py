@@ -11,6 +11,7 @@ A comparação ignora maiúsculas e acentos: `Padaria São João` e `PADARIA SAO
 """
 from __future__ import annotations
 
+import json
 import os
 import unicodedata
 from dataclasses import dataclass
@@ -92,6 +93,23 @@ def conferir_commits(raiz: Path, intervalo: str, termos: list[str]) -> list[Acha
             continue
         sha, _, mensagem = bloco.partition("\x1f")
         achados.extend(procurar(f"mensagem do commit {sha[:7]}", mensagem, termos))
+    return achados
+
+
+def conferir_evento(caminho: Path, termos: list[str]) -> list[Achado]:
+    """Título e corpo do PR lidos do payload do evento (`$GITHUB_EVENT_PATH`).
+
+    Ler do arquivo, e não de variável de ambiente, evita que o Actions repita o corpo inteiro do PR no
+    cabeçalho do passo e mantém o texto do PR longe de qualquer interpolação em shell.
+    """
+    try:
+        evento = json.loads(caminho.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise ErroTermos(f"não consegui ler o evento em {caminho}: {e}") from e
+    pr = evento.get("pull_request") or {}
+    achados = []
+    for campo in ("title", "body"):
+        achados.extend(procurar(f"{campo} do PR", pr.get(campo) or "", termos))
     return achados
 
 

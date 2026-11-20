@@ -5,7 +5,7 @@
     python -m fabrica classe <projeto> --base origin/main [--declarada B]
     python -m fabrica classe <projeto> --arquivos src/a.py docs/x.md [--declarada B]
     python -m fabrica autoria <repo> --intervalo BASE..HEAD --pessoa email [--pessoa email ...]
-    python -m fabrica termos <repo> [--intervalo BASE..HEAD] [--texto-env NOME ...]
+    python -m fabrica termos <repo> [--intervalo BASE..HEAD] [--evento $GITHUB_EVENT_PATH] [--texto-env NOME]
     python -m fabrica espelho conferir <repo>
     python -m fabrica espelho carimbar <repo> <arquivo.md> [...]
 
@@ -63,6 +63,8 @@ def _termos(a: argparse.Namespace) -> int:
     achados = termos.conferir_arvore(a.repo, lista)
     if a.intervalo:
         achados += termos.conferir_commits(a.repo, a.intervalo, lista)
+    if a.evento:
+        achados += termos.conferir_evento(a.evento, lista)
     achados += termos.conferir_variaveis(a.texto_env or [], lista)
     for x in achados:
         lugar = f"{_mostravel(x.onde)}:{x.linha}" if x.linha else f"nome do arquivo {_mostravel(x.onde)}"
@@ -119,6 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     te = sub.add_parser("termos", help=f"falha se algum termo de ${termos.VARIAVEL} aparece no repositório")
     te.add_argument("repo", type=Path)
     te.add_argument("--intervalo", help="também confere as mensagens dos commits de BASE..HEAD")
+    te.add_argument("--evento", type=Path, help="payload do evento do Actions; confere título e corpo do PR")
     te.add_argument("--texto-env", action="append", help="também confere o texto desta variável; repita")
 
     es = sub.add_parser("espelho", help="confere ou carimba as traduções em en/")

@@ -61,10 +61,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      # Título e corpo do PR entram por variável de ambiente, nunca interpolados no script:
+      # Título e corpo do PR são lidos do payload do evento pelo Python, nunca interpolados no script:
       # interpolar texto de PR dentro de `run:` é injeção de comando.
       - env:
           TERMOS_PROIBIDOS: ${{ secrets.TERMOS_PROIBIDOS }}
-          PR_TITULO: ${{ github.event.pull_request.title }}
-          PR_CORPO: ${{ github.event.pull_request.body }}
-        run: python3 -m fabrica termos . --intervalo "$BASE..$TOPO" --texto-env PR_TITULO --texto-env PR_CORPO
+        run: python3 -m fabrica termos . --intervalo "$BASE..$TOPO" --evento "$GITHUB_EVENT_PATH"
