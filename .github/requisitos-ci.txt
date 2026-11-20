@@ -1,0 +1,14 @@
+# Ferramentas usadas só na CI e em scripts/verificar. Não são dependência de execução da fábrica.
+# Instale com: python -m pip install --require-hashes --no-deps -r .github/requisitos-ci.txt
+# Um wheel trocado no PyPI muda o hash e derruba a instalação em vez de rodar código desconhecido.
+# Hashes copiados de https://pypi.org/pypi/ruff/0.8.6/json
+ruff==0.8.6 \
+    --hash=sha256:7ae4478b1471fc0c44ed52a6fb787e641a2ac58b1c1f91763bafbc2faddc5117 \
+    --hash=sha256:0509e8da430228236a18a677fcdb0c1f102dd26d5520f71f79b094963322ed25 \
+    --hash=sha256:496dd38a53aa173481a7d8866bcd6451bd934d06976a2505028a50583e001b76 \
+    --hash=sha256:0c000a471d519b3e6cfc9c6680025d923b4ca140ce3e4612d1a2ef58e11f11fe \
+    --hash=sha256:54799ca3d67ae5e0b7a7ac234baa657a9c1784b48ec954a094da7c206e0365b1 \
+    --hash=sha256:e88b8f6d901477c41559ba540beeb5a671e14cd29ebd5683903572f4b40a9807 \
+    --hash=sha256:f1d70bef3d16fdc897ee290d7d20da3cbe4e26349f62e8a0274e7a3f4ce7a905 \
+    --hash=sha256:7d7fc2377a04b6e04ffe588caad613d0c460eb2ecba4c0ccbbfe2bc973cbc162 \
+    --hash=sha256:e169ea1b9eae61c99b257dc83b9ee6c76f89042752cb2d83486a7d6e48e8f764

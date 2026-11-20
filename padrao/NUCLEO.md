@@ -1,11 +1,11 @@
 # Núcleo obrigatório (N1 a N11)
 
-Fonte: Padrão de engenharia v1.1. Toda regra obrigatória tem evidência verificável: o que é objetivo
+Toda regra obrigatória tem evidência verificável: o que é objetivo
 a CI bloqueia; o que exige julgamento vai para revisão independente registrada no PR.
 
 | # | Regra | Evidência |
 |---|---|---|
-| N1 | Tudo entra na principal por PR com checks verdes. Sem push direto, sem force-push, merge por squash. | Ruleset com checks obrigatórios; caminhos de portão em CODEOWNERS. |
+| N1 | Tudo entra na principal por PR com checks verdes. Sem push direto, sem force-push, merge por squash. | Ruleset com checks obrigatórios e só squash; caminhos de portão pela classe A calculada no diff. CODEOWNERS só quando os agentes abrirem PR com identidade própria: o autor de um PR não aprova o próprio PR. |
 | N2 | A CI roda `verificar` e `testar` em checkout limpo, instalando pelo lockfile. | Workflow do perfil. |
 | N3 | Nenhum segredo ou dado sensível versionado. | gitleaks nos commits do PR. |
 | N4 | Mudança de comportamento vem com prova de comportamento. | Bug: teste que falhava e passa. Novo: cenário de aceite pelo ponto de entrada real. |

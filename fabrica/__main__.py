@@ -4,6 +4,8 @@
     python -m fabrica conferir <projeto>
     python -m fabrica classe <projeto> --base origin/main [--declarada B]
     python -m fabrica classe <projeto> --arquivos src/a.py docs/x.md [--declarada B]
+    python -m fabrica autoria <repo> --intervalo BASE..HEAD --pessoa email [--pessoa email ...]
+    python -m fabrica termos <repo> [--intervalo BASE..HEAD] [--texto-env NOME ...]
 
 Em `classe`, <projeto> é a raiz do repositório. Com --arquivos, cada arquivo conta como modificado:
 remoções e renames só aparecem com --base.
@@ -11,10 +13,11 @@ remoções e renames só aparecem com --base.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
-from . import classe, projeto, sincronizar
+from . import autoria, classe, git, projeto, sincronizar, termos
 from .padroes import normalizar
 
 
@@ -40,6 +43,36 @@ def _classe(a: argparse.Namespace) -> int:
     return 0
 
 
+def _autoria(a: argparse.Namespace) -> int:
+    commits = autoria.ler_commits(a.repo, a.intervalo)
+    violacoes = autoria.conferir(commits, a.pessoa)
+    for v in violacoes:
+        print(f"[N11] {v.sha}: {_mostravel(v.motivo)}")
+    if violacoes:
+        print(f"N11: {len(violacoes)} violação(ões) em {len(commits)} commit(s). Nenhum agente assina commit; "
+              "quem escreveu o quê vai na descrição do PR.")
+        return 1
+    print(f"N11: OK em {len(commits)} commit(s)")
+    return 0
+
+
+def _termos(a: argparse.Namespace) -> int:
+    lista = termos.carregar(os.environ.get(termos.VARIAVEL))
+    achados = termos.conferir_arvore(a.repo, lista)
+    if a.intervalo:
+        achados += termos.conferir_commits(a.repo, a.intervalo, lista)
+    achados += termos.conferir_variaveis(a.texto_env or [], lista)
+    for x in achados:
+        lugar = f"{_mostravel(x.onde)}:{x.linha}" if x.linha else f"nome do arquivo {_mostravel(x.onde)}"
+        print(f"[termo {x.termo}] {lugar}")
+    if achados:
+        print(f"Termos proibidos: {len(achados)} ocorrência(s). O termo não aparece aqui de propósito: "
+              "o log é público. Consulte a lista pelo número.")
+        return 1
+    print(f"Termos proibidos: OK ({len(lista)} termo(s) conferido(s))")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="fabrica")
     sub = ap.add_subparsers(dest="comando", required=True)
@@ -57,6 +90,16 @@ def main(argv: list[str] | None = None) -> int:
     origem.add_argument("--arquivos", nargs="+", help="lista explícita de arquivos alterados")
     k.add_argument("--declarada", choices=sorted(classe.ORDEM), help="classe declarada na triagem ou no plano")
 
+    au = sub.add_parser("autoria", help="N11: falha se algum commit do intervalo tem agente como autor ou coautor")
+    au.add_argument("repo", type=Path)
+    au.add_argument("--intervalo", required=True, help="BASE..HEAD, por exemplo origin/main..HEAD")
+    au.add_argument("--pessoa", action="append", required=True, help="e-mail de pessoa do projeto; repita")
+
+    te = sub.add_parser("termos", help=f"falha se algum termo de ${termos.VARIAVEL} aparece no repositório")
+    te.add_argument("repo", type=Path)
+    te.add_argument("--intervalo", help="também confere as mensagens dos commits de BASE..HEAD")
+    te.add_argument("--texto-env", action="append", help="também confere o texto desta variável; repita")
+
     a = ap.parse_args(argv)
     try:
         if a.comando == "sincronizar":
@@ -65,6 +108,10 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if a.comando == "classe":
             return _classe(a)
+        if a.comando == "autoria":
+            return _autoria(a)
+        if a.comando == "termos":
+            return _termos(a)
         d = sincronizar.conferir(a.projeto)
         for rotulo, itens in (("alterado", d.alterados), ("faltando", d.faltando), ("sobrando", d.sobrando)):
             for item in itens:
@@ -74,7 +121,8 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print("OK: .fabrica/ igual à versão registrada")
         return 0
-    except (projeto.ErroProjeto, sincronizar.ErroSincronizacao, classe.ErroClasse) as e:
+    except (projeto.ErroProjeto, sincronizar.ErroSincronizacao, classe.ErroClasse, git.ErroGit,
+            termos.ErroTermos, ValueError) as e:
         print(f"erro: {e}", file=sys.stderr)
         return 2
 

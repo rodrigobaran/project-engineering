@@ -28,7 +28,7 @@ aos outros. A primeira versão do plano previa `projeto.yml` e `classes.yml`.
 
 ## Consequências
 - Um agente pode editar um arquivo de `.fabrica/` e o manifesto juntos para enganar a conferência.
-  Defesa: `.fabrica/` é caminho de portão (classe A) e está em CODEOWNERS.
+  Defesa: `.fabrica/` é caminho de portão, então a mudança é classe A e passa pelo ok humano.
 - Atualizar a fábrica num projeto é um PR de sincronização, revisado como qualquer outro.
-- Workflows reutilizáveis do GitHub (previstos no Padrão v1.1) continuam possíveis para os passos de CI;
+- Workflows reutilizáveis do GitHub continuam possíveis para os passos de CI;
   eles complementam a `.fabrica/`, não a substituem, porque o agente não lê workflow remoto.
