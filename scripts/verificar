@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Portão rápido: lint e compilação. Falha se o ruff faltar: um portão que pula em silêncio não é portão.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if ! command -v ruff >/dev/null 2>&1; then
+  echo "erro: ruff não instalado (pip install ruff). Não pulo o lint em silêncio." >&2
+  exit 1
+fi
+ruff check fabrica tests
+python3 -m compileall -q fabrica
+echo "verificar: OK"
