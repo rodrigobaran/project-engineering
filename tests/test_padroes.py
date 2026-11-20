@@ -29,6 +29,11 @@ class TestPadroes(unittest.TestCase):
     def test_barra_invertida_do_windows(self):
         self.assertTrue(casa("scripts\\verificar", "scripts/verificar"))
 
+    def test_caixa_so_e_ignorada_quando_pedido(self):
+        self.assertFalse(casa("agents.md", "AGENTS.md"))
+        self.assertTrue(casa("agents.md", "AGENTS.md", ignorar_caixa=True))
+        self.assertTrue(casa(".GitHub/ci.yml", ".github/", ignorar_caixa=True))
+
 
 if __name__ == "__main__":
     unittest.main()
