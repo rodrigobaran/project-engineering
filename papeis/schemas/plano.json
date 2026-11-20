@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "plano",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ponto_de_entrada", "resultado_esperado", "preservar", "teste", "arquivos", "adr", "cabe_num_pr"],
+  "properties": {
+    "ponto_de_entrada": {"type": "string"},
+    "resultado_esperado": {"type": "string"},
+    "preservar": {"type": "array", "items": {"type": "string"}},
+    "teste": {"type": "string", "description": "teste que falha antes, ou cenário de aceite"},
+    "arquivos": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "adr": {"type": ["string", "null"], "description": "decisão a registrar, ou null"},
+    "cabe_num_pr": {"type": "boolean"},
+    "divisao": {"type": "array", "items": {"type": "string"}}
+  }
+}
