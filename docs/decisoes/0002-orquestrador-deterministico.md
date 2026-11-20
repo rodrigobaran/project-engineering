@@ -1,6 +1,6 @@
 # 0002. Orquestrador determinístico, com estado no GitHub e chamadas diretas às APIs
 
-Data: 2026-11-20 · Estado: proposta (rascunho; nenhum código antes da aprovação)
+Data: 2026-11-20 · Estado: aceita (PR #10)
 
 ## Contexto
 A fábrica já tem os papéis (`papeis/`), as classes calculadas pelo diff (`fabrica classe`), os checks de
@@ -8,7 +8,7 @@ autoria e de termos e o validador de schema. Falta o motor que leva uma tarefa d
 plano, portão humano, implementação, CI, revisão independente e merge. É o primeiro componente que gasta
 dinheiro e o primeiro que age sozinho, por isso ele vem por último e começa por este ADR.
 
-## Decisão proposta
+## Decisão
 1. **Fluxo em código, estado no GitHub.** Um script Python (`fabrica/orquestrar.py`) roda em GitHub Actions
    e trata os repositórios dos projetos como alvos. Cada etapa lê um artefato e grava outro onde a pessoa já
    olha: rótulo da issue, `plano.md` no PR, check run. Nenhum LLM decide a próxima etapa. O modelo produz
@@ -50,14 +50,36 @@ dinheiro e o primeiro que age sozinho, por isso ele vem por último e começa po
 LangGraph, com o executor de código inalterado. Ganha quem tiver menos falhas de orquestração por tarefa e menor
 custo. Se ninguém superar o script por margem clara, fica o script: é menos dependência para manter.
 
-## Decisões que são do responsável, antes de qualquer código
-1. **Tetos de gasto:** valor por tarefa e por dia, e o limite mensal configurado no console de cada fornecedor.
-2. **Primeiro alvo:** o sistema de marketing, em modo desenvolvimento, ou outro projeto.
-3. **GitHub App:** criar o App autor (recomendado) ou aceitar, no começo, PRs abertos pela própria conta, sem
-   revisão obrigatória.
-4. **Onde o implementador roda:** no runner do Actions (recomendado: não depende do notebook ligado) ou na máquina
-   da pessoa, por controle remoto.
-5. **Modelos por papel:** confirmar a tabela do plano (titular e substitutos) ou mudar antes do primeiro gasto.
+## Decisões do responsável (20/11/2026)
+1. **Tetos de gasto:** `ORQ_TETO_TAREFA_USD=5` e `ORQ_TETO_DIA_USD=20`, mais um limite mensal de US$ 100 no
+   console de cada fornecedor. Quem corta de verdade é o teto do orquestrador, porque em alguns consoles o limite
+   só avisa. Um teste prova que a chamada que estouraria o teto não é feita.
+2. **Primeiro alvo:** o sistema de marketing do responsável, em modo desenvolvimento. Antes da primeira tarefa,
+   o dossiê de descoberta desse sistema precisa estar com o portão aberto. Sem ele, o planejador inventaria
+   requisito, que é a hipótese que o portão barra.
+3. **GitHub App:** um App próprio abre os PRs, com permissão mínima e instalado só nos repositórios-alvo. Com o
+   autor do PR diferente do responsável, o ruleset do alvo passa a exigir a aprovação dele.
+4. **Onde o implementador roda:** no runner do GitHub Actions. Em repositório privado, cada execução consome
+   minutos do plano, e o JSONL registra a duração para medir esse custo.
+5. **Modelos por papel:** a tabela abaixo vai para `roteamento.toml`. Trocar um modelo é um PR nesse arquivo.
+
+| Papel | Titular | 1º substituto | 2º substituto |
+|---|---|---|---|
+| Triagem | Haiku 5.5 | Gemini 3.8 Flash | grok-4.3 |
+| Planejador | Fable 5.2 | Opus 5.5 (outro balde de cota) | grok-4.7 |
+| Implementador B/C | Sonnet 5.5 no Claude Code | GPT-6.2 Sol no Codex | manual, fora do fluxo (`precisa-humano`) |
+| Implementador A | Opus 5.5 no Claude Code | GPT-6.2 Astra no Codex | Fable 5.2 no Claude Code |
+| Revisor de PR escrito por Claude | Gemini 4 Argon | grok-4.7 | GPT-6.2 Astra |
+| Revisor de PR escrito por outro fornecedor | Opus 5.5 | Fable 5.2 | outro fornecedor que não seja o autor |
+| Revisor de segurança | Gemini 4 Argon | Opus 5.5 | grok-4.7 |
+
+Duas regras valem acima da tabela:
+- **O revisor nunca é do fornecedor do autor.** A N10 pede só outro modelo; o plano pede outro fornecedor, e
+  vale o mais rígido. Um substituto que caia nessa regra é pulado. Exemplo: no revisor de segurança, o Opus 5.5
+  é pulado quando o implementador foi Claude.
+- **Dado pessoal de cliente não passa pelo Fable 5.2.** O Fable exige retenção de 30 dias, sem opção de
+  retenção zero. Em projeto de cliente com dado pessoal, ele sai de todas as linhas, e o planejador passa a
+  ser o Opus 5.5.
 
 ## Consequências
 - A fábrica passa a ter um componente com acesso de escrita a outros repositórios. O App e o token ficam com o

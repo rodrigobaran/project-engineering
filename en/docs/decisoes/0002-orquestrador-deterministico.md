@@ -1,7 +1,7 @@
-<!-- mirror of docs/decisoes/0002-orquestrador-deterministico.md sha256:f16341730a59526d26a172bade97b89b54ed18b0db628817bced735141f8ea36; edit the Portuguese source first -->
+<!-- mirror of docs/decisoes/0002-orquestrador-deterministico.md sha256:a72edc57fcf9ae79da0f5f77e428de1825f47c6d1a671e54bcd990317bd7164a; edit the Portuguese source first -->
 # 0002. Deterministic orchestrator, with state in GitHub and direct API calls
 
-Date: 2026-11-20 · Status: proposed (draft; no code before approval)
+Date: 2026-11-20 · Status: accepted (PR #10)
 
 ## Context
 The factory already has the roles (`papeis/`), the classes computed from the diff (`fabrica classe`), the
@@ -9,7 +9,7 @@ authorship and forbidden-terms checks and the schema validator. What is missing 
 end to end: triage, plan, human gate, implementation, CI, independent review and merge. It is the first component
 that spends money and the first that acts on its own, which is why it comes last and starts with this ADR.
 
-## Proposed decision
+## Decision
 1. **Flow in code, state in GitHub.** A Python script (`fabrica/orquestrar.py`) runs in GitHub Actions
    and treats the projects' repositories as targets. Each step reads one artifact and writes another where the person already
    looks: an issue label, `plano.md` in the PR, a check run. No LLM decides the next step. The model produces
@@ -51,14 +51,37 @@ that spends money and the first that acts on its own, which is why it comes last
 LangGraph, with the code executor unchanged. Whoever has fewer orchestration failures per task and lower
 cost wins. If none beats the script by a clear margin, the script stays: it is less dependency to maintain.
 
-## Decisions that belong to the owner, before any code
-1. **Spending ceilings:** amount per task and per day, and the monthly limit set in each vendor's console.
-2. **First target:** the marketing system, in development mode, or another project.
-3. **GitHub App:** create the author App (recommended) or accept, at first, PRs opened by the owner's own account, with no
-   required review.
-4. **Where the implementer runs:** on the Actions runner (recommended: it does not depend on the laptop being on) or on the
-   owner's machine, by remote control.
-5. **Models per role:** confirm the plan's table (primary and substitutes) or change it before the first spend.
+## Owner's decisions (2026-11-20)
+1. **Spending ceilings:** `ORQ_TETO_TAREFA_USD=5` and `ORQ_TETO_DIA_USD=20`, plus a monthly limit of US$ 100 in
+   each vendor's console. The orchestrator's ceiling is what actually cuts, because in some consoles the limit
+   only warns. A test proves that the call that would exceed the ceiling is never made.
+2. **First target:** the owner's marketing system, in development mode. Before the first task, that system's
+   discovery dossier must have its gate open. Without it, the planner would invent requirements, which is the
+   hypothesis the gate blocks.
+3. **GitHub App:** a dedicated App opens the PRs, with least permission and installed only on the target
+   repositories. With the PR author different from the owner, the target's ruleset can require the owner's
+   approval.
+4. **Where the implementer runs:** on the GitHub Actions runner. In a private repository, each run uses the
+   plan's minutes, and the JSONL records the duration to measure that cost.
+5. **Models per role:** the table below goes into `roteamento.toml`. Changing a model is a PR to that file.
+
+| Role | Primary | 1st substitute | 2nd substitute |
+|---|---|---|---|
+| Triage | Haiku 5.5 | Gemini 3.8 Flash | grok-4.3 |
+| Planner | Fable 5.2 | Opus 5.5 (separate quota bucket) | grok-4.7 |
+| Implementer B/C | Sonnet 5.5 in Claude Code | GPT-6.2 Sol in Codex | manual, outside the flow (`precisa-humano`) |
+| Implementer A | Opus 5.5 in Claude Code | GPT-6.2 Astra in Codex | Fable 5.2 in Claude Code |
+| Reviewer of a PR written by Claude | Gemini 4 Argon | grok-4.7 | GPT-6.2 Astra |
+| Reviewer of a PR written by another vendor | Opus 5.5 | Fable 5.2 | any vendor other than the author's |
+| Security reviewer | Gemini 4 Argon | Opus 5.5 | grok-4.7 |
+
+Two rules override the table:
+- **The reviewer is never from the author's vendor.** N10 asks only for another model; the plan asks for
+  another vendor, and the stricter rule wins. A substitute that falls under this rule is skipped. Example: for
+  the security reviewer, Opus 5.5 is skipped when the implementer was Claude.
+- **Client personal data does not go through Fable 5.2.** Fable requires 30-day retention, with no
+  zero-retention option. In a client project with personal data, it leaves every row, and the planner
+  becomes Opus 5.5.
 
 ## Consequences
 - The factory gains a component with write access to other repositories. The App and the token get the
