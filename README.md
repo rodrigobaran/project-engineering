@@ -22,6 +22,7 @@ As decisões de arquitetura ficam em `docs/decisoes/`.
 | `camadas/` | O que planejar, revisar e testar por tipo de software | Sim, a camada do projeto vira `.fabrica/camada.md` |
 | `papeis/` | Prompts e schemas de triagem, planejador, implementador, revisor | Sim, em `.fabrica/papeis/` |
 | `fabrica/` | Sincronização, conferência de deriva, cálculo de classe, checks de autoria e de termos | Não: roda a partir daqui |
+| `descoberta/` | Schema, regras e exemplo fictício do dossiê de descoberta | Não: os dossiês reais ficam fora deste repositório |
 | `docs/decisoes/` | ADRs da fábrica | Não |
 | `en/` | Espelho em inglês de cada `.md`, com o hash do original | Não |
 
@@ -37,6 +38,7 @@ python -m fabrica autoria . --intervalo origin/main..HEAD --pessoa <e-mail>
 python -m fabrica termos . --intervalo origin/main..HEAD   # lista em $TERMOS_PROIBIDOS
 python -m fabrica espelho conferir .        # falha se alguma tradução em en/ ficou para trás
 python -m fabrica espelho carimbar . <arquivo.md>   # grava o hash depois de atualizar a tradução
+python -m fabrica dossie conferir <dossie.json> --portao   # regras e portão da descoberta
 ```
 
 Verificação local: `scripts/verificar` (ruff, instalado por `.github/requisitos-ci.txt`, e conferência do

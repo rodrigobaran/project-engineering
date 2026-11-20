@@ -1,0 +1,106 @@
+{
+  "versao_schema": 1,
+  "projeto": "padaria-exemplo",
+  "versao": 1,
+  "data": "2026-11-20",
+  "fontes": [
+    {"id": "F1", "tipo": "entrevista", "descricao": "Entrevista fictícia com a dona da padaria, 42 minutos"},
+    {"id": "F2", "tipo": "planilha", "descricao": "Planilha fictícia de encomendas de outubro, aba 'pedidos'"},
+    {"id": "F3", "tipo": "norma", "descricao": "Lei 13.709/2018 (LGPD), arts. 7º e 18"}
+  ],
+  "secoes": {
+    "objetivo": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "Reduzir encomendas perdidas por recado de WhatsApp de 8 para no máximo 1 por mês.", "fontes": [{"fonte": "F1", "trecho": "min 03:10"}]},
+        {"texto": "Toda encomenda paga antes da produção.", "fontes": [{"fonte": "F1", "trecho": "min 05:40"}]}
+      ]
+    },
+    "atores_permissoes": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "Cliente cria e cancela as próprias encomendas e vê só as dele.", "fontes": [{"fonte": "F1", "trecho": "min 07:20"}]},
+        {"texto": "Atendente vê todas as encomendas do dia e muda o estado para 'em produção' e 'pronta'; não vê dados de pagamento.", "fontes": [{"fonte": "F1", "trecho": "min 09:05"}]},
+        {"texto": "Só a dona estorna pagamento e altera preço de produto.", "fontes": [{"fonte": "F1", "trecho": "min 10:30"}]}
+      ]
+    },
+    "modelo_dominio": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "Entidades: Cliente, Produto, Encomenda, ItemDaEncomenda, Pagamento.", "fontes": [{"fonte": "F2", "trecho": "colunas A a H"}]},
+        {"texto": "Invariante: o total da encomenda é a soma dos itens no preço do momento do pedido, e não muda se o produto mudar de preço depois.", "fontes": [{"fonte": "F1", "trecho": "min 12:00"}]},
+        {"texto": "Invariante: retirada no mínimo 24 horas depois do pedido.", "fontes": [{"fonte": "F2", "trecho": "coluna F"}]}
+      ]
+    },
+    "ciclos_de_vida": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "Encomenda: aguardando_pagamento → paga → em_producao → pronta → retirada; paga ou aguardando_pagamento → cancelada.", "fontes": [{"fonte": "F1", "trecho": "min 14:15"}]},
+        {"texto": "Encomenda em produção não pode ser cancelada pelo cliente.", "fontes": [{"fonte": "F1", "trecho": "min 15:02"}]}
+      ]
+    },
+    "fluxos_criticos": {
+      "estado": "respondida",
+      "cenarios": [
+        {"nome": "Pagamento confirmado uma vez só", "dado": "uma encomenda aguardando pagamento", "quando": "o provedor avisa a confirmação duas vezes", "entao": "a encomenda fica paga uma vez e existe um único pagamento", "fontes": [{"fonte": "F1", "trecho": "min 18:40"}]},
+        {"nome": "Cancelamento bloqueado em produção", "dado": "uma encomenda em produção", "quando": "o cliente tenta cancelar", "entao": "o pedido é recusado e o estado não muda", "fontes": [{"fonte": "F1", "trecho": "min 15:02"}]}
+      ]
+    },
+    "dados_pessoais": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "Dados: nome, telefone e e-mail do cliente. Base legal: execução de contrato.", "fontes": [{"fonte": "F3", "trecho": "art. 7º, V"}]},
+        {"texto": "Retenção: 12 meses após a última encomenda; depois, anonimizar.", "fontes": [{"fonte": "F1", "trecho": "min 21:30"}]},
+        {"texto": "O cliente pode pedir cópia e exclusão dos dados pela própria conta.", "fontes": [{"fonte": "F3", "trecho": "art. 18"}]}
+      ]
+    },
+    "dinheiro": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "Real, em centavos inteiros; nenhum cálculo em ponto flutuante.", "fontes": [{"fonte": "F2", "trecho": "coluna G"}]},
+        {"texto": "Confirmação de pagamento idempotente pelo identificador do provedor.", "fontes": [{"fonte": "F1", "trecho": "min 18:40"}]},
+        {"texto": "Conciliação diária contra o extrato do provedor; divergência avisa a dona.", "fontes": [{"fonte": "F1", "trecho": "min 23:10"}]}
+      ]
+    },
+    "integracoes": {
+      "estado": "pergunta_aberta",
+      "afirmacoes": [
+        {"texto": "Pagamento por Pix num provedor ainda não escolhido.", "fontes": [{"fonte": "F1", "trecho": "min 17:00"}]}
+      ],
+      "perguntas": [
+        {"pergunta": "Qual provedor de Pix, e ele reenvia o aviso de pagamento quando o sistema está fora do ar?", "dono": "dona da padaria", "prazo": "2026-11-27"}
+      ]
+    },
+    "volume_desempenho": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "De 20 a 60 encomendas por dia, com pico na véspera de feriado.", "fontes": [{"fonte": "F2", "trecho": "linhas 2 a 640"}]}
+      ]
+    },
+    "auditoria": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "Registrar quem mudou o estado de cada encomenda, quando, e todo estorno.", "fontes": [{"fonte": "F1", "trecho": "min 25:00"}]}
+      ]
+    },
+    "ameacas": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "Spoofing: aviso de pagamento falso. Mitigação: conferir a assinatura do provedor. Teste: aviso sem assinatura é recusado.", "hipotese": true},
+        {"texto": "Elevação de privilégio: atendente tenta estornar. Mitigação: permissão no servidor. Teste: estorno por atendente devolve 403.", "fontes": [{"fonte": "F1", "trecho": "min 10:30"}]}
+      ]
+    },
+    "operacao": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "RPO de 24 horas e RTO de 4 horas; backup diário do banco.", "hipotese": true}
+      ]
+    },
+    "fora_de_escopo": {
+      "estado": "respondida",
+      "afirmacoes": [
+        {"texto": "Entrega em domicílio, programa de fidelidade e emissão de nota fiscal ficam fora desta versão.", "fontes": [{"fonte": "F1", "trecho": "min 30:00"}]}
+      ]
+    }
+  }
+}

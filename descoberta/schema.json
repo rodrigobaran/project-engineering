@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "dossie",
+  "description": "Dossiê de descoberta. O schema confere a forma; `fabrica dossie conferir` confere as regras que dependem do estado de cada seção e o portão.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["versao_schema", "projeto", "versao", "data", "fontes", "secoes"],
+  "properties": {
+    "versao_schema": {"const": 1},
+    "projeto": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "versao": {"type": "integer", "description": "versão do dossiê; mudança de escopo gera versão nova"},
+    "data": {"$ref": "#/$defs/data"},
+    "fontes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "tipo", "descricao"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^F[0-9]+$"},
+          "tipo": {"enum": ["entrevista", "planilha", "formulario", "documento", "tela", "conversa", "banco", "norma", "outro"]},
+          "descricao": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "secoes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objetivo", "atores_permissoes", "modelo_dominio", "ciclos_de_vida", "fluxos_criticos",
+                   "dados_pessoais", "dinheiro", "integracoes", "volume_desempenho", "auditoria", "ameacas",
+                   "operacao", "fora_de_escopo"],
+      "properties": {
+        "objetivo": {"$ref": "#/$defs/secao"},
+        "atores_permissoes": {"$ref": "#/$defs/secao"},
+        "modelo_dominio": {"$ref": "#/$defs/secao"},
+        "ciclos_de_vida": {"$ref": "#/$defs/secao"},
+        "fluxos_criticos": {"$ref": "#/$defs/secao"},
+        "dados_pessoais": {"$ref": "#/$defs/secao"},
+        "dinheiro": {"$ref": "#/$defs/secao"},
+        "integracoes": {"$ref": "#/$defs/secao"},
+        "volume_desempenho": {"$ref": "#/$defs/secao"},
+        "auditoria": {"$ref": "#/$defs/secao"},
+        "ameacas": {"$ref": "#/$defs/secao"},
+        "operacao": {"$ref": "#/$defs/secao"},
+        "fora_de_escopo": {"$ref": "#/$defs/secao"}
+      }
+    }
+  },
+  "$defs": {
+    "data": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "citacao": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fonte", "trecho"],
+      "properties": {
+        "fonte": {"type": "string", "pattern": "^F[0-9]+$"},
+        "trecho": {"type": "string", "minLength": 1, "description": "linha, página, célula ou minuto"}
+      }
+    },
+    "afirmacao": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["texto"],
+      "properties": {
+        "texto": {"type": "string", "minLength": 1},
+        "fontes": {"type": "array", "items": {"$ref": "#/$defs/citacao"}},
+        "hipotese": {"type": "boolean"}
+      }
+    },
+    "pergunta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pergunta", "dono", "prazo"],
+      "properties": {
+        "pergunta": {"type": "string", "minLength": 1},
+        "dono": {"type": "string", "minLength": 1},
+        "prazo": {"$ref": "#/$defs/data"}
+      }
+    },
+    "cenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nome", "dado", "quando", "entao"],
+      "properties": {
+        "nome": {"type": "string", "minLength": 1},
+        "dado": {"type": "string", "minLength": 1},
+        "quando": {"type": "string", "minLength": 1},
+        "entao": {"type": "string", "minLength": 1},
+        "fontes": {"type": "array", "items": {"$ref": "#/$defs/citacao"}},
+        "hipotese": {"type": "boolean"}
+      }
+    },
+    "secao": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["estado"],
+      "properties": {
+        "estado": {"enum": ["respondida", "nao_se_aplica", "pergunta_aberta"]},
+        "motivo": {"type": "string", "minLength": 1},
+        "afirmacoes": {"type": "array", "items": {"$ref": "#/$defs/afirmacao"}},
+        "cenarios": {"type": "array", "items": {"$ref": "#/$defs/cenario"}},
+        "perguntas": {"type": "array", "items": {"$ref": "#/$defs/pergunta"}}
+      }
+    }
+  }
+}
