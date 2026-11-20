@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "triagem",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pronta", "classe", "modo", "criterio_aceite", "pergunta"],
+  "properties": {
+    "pronta": {"type": "boolean"},
+    "classe": {"enum": ["A", "B", "C"]},
+    "modo": {"enum": ["desenvolvimento", "manutencao"]},
+    "criterio_aceite": {"type": "string"},
+    "pergunta": {"type": ["string", "null"], "description": "o que falta para a issue ficar pronta"}
+  }
+}

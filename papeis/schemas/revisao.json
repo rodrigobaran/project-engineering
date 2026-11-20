@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "revisao",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["revisor", "sha", "conclusao", "achados"],
+  "properties": {
+    "revisor": {"type": "string", "description": "fornecedor e modelo"},
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "conclusao": {"enum": ["aprovado", "reprovado"]},
+    "achados": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["arquivo", "cenario", "consequencia", "gravidade", "teste_detecta"],
+        "properties": {
+          "arquivo": {"type": "string"},
+          "cenario": {"type": "string"},
+          "consequencia": {"type": "string"},
+          "gravidade": {"enum": ["alta", "media", "baixa"]},
+          "teste_detecta": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}
