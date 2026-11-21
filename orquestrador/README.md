@@ -54,10 +54,13 @@ sem o log inteiro, não há como saber o gasto. O dia do teto diário é o dia e
 
 ## Preços
 
-Os preços são de 20/11/2026, em US$ por milhão de tokens. Quando a página do fornecedor dava dois valores,
-vale o maior. Quatro modelos da tabela do ADR ainda não têm preço conferido (Gemini 3.8 Flash, grok-4.3,
-GPT-6.2 Sol e GPT-6.2 Astra) e, por isso, nunca são chamados. Enquanto isso, a triagem fica sem substituto.
-Preencher um preço é um PR que cita a fonte.
+Os preços foram conferidos em 20/11/2026, em US$ por milhão de tokens, e as fontes estão no `roteamento.toml`.
+Quando o fornecedor anuncia um preço de lançamento, vale o de depois: o do Gemini 4 Argon dobra em 1/12/2026,
+e o do Gemini 3.8 Flash, em 1/1/2027. Mudar um preço é um PR que cita a fonte, e o teste dos preços muda junto.
+
+Três fornecedores cobram a chamada inteira numa faixa mais cara quando a entrada é longa: a Anthropic no
+Haiku 5.5, acima de 100 mil tokens; o xAI, a partir de 200 mil; e a OpenAI, acima de 272 mil. A faixa olha a
+entrada somada à leitura de cache e, dentro dela, o cache é cobrado como entrada, o lado seguro.
 
 ## Ainda não está aqui
 

@@ -3,6 +3,15 @@
 # Preços em US$ por milhão de tokens. Um modelo sem preço ou sem contexto declarado nunca é chamado:
 # sem preço, o teto de custo não tem como valer. Preencher um preço é um PR que cita a fonte.
 # Valores conferidos em 20/11/2026. Quando a página do fornecedor dava dois preços, vale o maior.
+# A faixa vale para a chamada inteira quando a entrada passa de `acima_de` tokens. Acima dela, a leitura de
+# cache é cobrada como entrada da faixa, o lado seguro.
+#
+# Fontes:
+# - Anthropic: https://platform.claude.com/docs/en/about-claude/pricing
+# - Google: https://ai.google.dev/gemini-api/docs/pricing e as páginas de cada modelo em
+#   https://ai.google.dev/gemini-api/docs/models/
+# - xAI: https://docs.x.ai/developers/pricing e https://docs.x.ai/developers/models
+# - OpenAI: https://developers.openai.com/api/docs/models/gpt-6.2-sol e .../gpt-6.2-astra
 
 limite_contexto = 0.7  # acima de 70% do contexto do modelo, a chamada vai para outro com contexto maior
 espera_padrao_s = 5    # espera antes da nova tentativa quando o erro não traz retry-after
@@ -46,38 +55,66 @@ sem_retencao_zero = true  # exige retenção de 30 dias: fica fora de projeto de
 [modelos.gemini-4-argon]
 fornecedor = "google"
 id = "gemini-4-argon"
-contexto = 1_000_000
-saida_max = 65_000
-preco = { entrada = 4.00, saida = 20.00 }  # o preço de lançamento é menor; vale o de depois
+contexto = 1_048_576  # entrada e saída somadas
+saida_max = 65_536
+preco = { entrada = 4.00, saida = 20.00, cache_leitura = 0.20 }  # 2 / 10 só até 30/11/2026
 
 [modelos.gemini-3-8-flash]
 fornecedor = "google"
 id = "gemini-3.8-flash"
-contexto = 1_000_000
-saida_max = 65_000
-# sem preço conferido: não é chamado
+contexto = 1_048_576
+saida_max = 65_536
+preco = { entrada = 1.50, saida = 7.50, cache_leitura = 0.15 }  # 0,75 / 3,75 só até 31/12/2026
 
 [modelos.grok-4-7]
 fornecedor = "xai"
 id = "grok-4.7"
 contexto = 500_000
-preco = { entrada = 2.00, saida = 6.00 }
+
+[modelos.grok-4-7.preco]
+entrada = 2.00
+saida = 6.00
+cache_leitura = 0.50
+# O xAI cobra a faixa longa "a partir de" 200 mil tokens de entrada; `acima_de` é estrito, daí o 199_999.
+faixa = { acima_de = 199_999, entrada = 4.00, saida = 12.00 }
 
 [modelos.grok-4-3]
 fornecedor = "xai"
 id = "grok-4.3"
-contexto = 1_000_000
-# sem preço conferido: não é chamado
+contexto = 1_000_000  # tem página própria, mas sumiu da lista de modelos do xAI: pode estar de saída
+
+[modelos.grok-4-3.preco]
+entrada = 1.25
+saida = 2.50
+cache_leitura = 0.20
+faixa = { acima_de = 199_999, entrada = 2.50, saida = 5.00 }
+
+# OpenAI: a janela é de 1.050.000 tokens, mas a entrada máxima é de 922.000; o contexto aqui é a entrada.
+# Acima de 272 mil tokens de entrada, a entrada dobra e a saída sobe 1,5x na chamada inteira.
 
 [modelos.gpt-6-2-sol]
 fornecedor = "openai"
 id = "gpt-6.2-sol"
-# sem preço e sem contexto conferidos: não é chamado
+contexto = 922_000
+saida_max = 128_000
+
+[modelos.gpt-6-2-sol.preco]
+entrada = 2.00
+saida = 10.00
+cache_leitura = 0.10
+faixa = { acima_de = 272_000, entrada = 4.00, saida = 15.00 }
 
 [modelos.gpt-6-2-astra]
 fornecedor = "openai"
 id = "gpt-6.2-astra"
-# sem preço e sem contexto conferidos: não é chamado
+contexto = 922_000
+saida_max = 128_000
+
+[modelos.gpt-6-2-astra.preco]
+entrada = 8.00
+saida = 40.00
+cache_leitura = 0.40
+faixa = { acima_de = 272_000, entrada = 16.00, saida = 60.00 }
 
 # --- Papéis ------------------------------------------------------------------------------------------
 # O primeiro candidato é o titular; os outros, os substitutos, na ordem. "humano" encerra a lista: a tarefa

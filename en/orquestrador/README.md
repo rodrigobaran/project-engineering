@@ -1,5 +1,4 @@
-<!-- mirror of orquestrador/README.md sha256:e6c2e1a964c401aa415e45c8076e65c10adf37c994b923c86ae0050d3976408e; edit the Portuguese source first -->
-<!-- mirror of orquestrador/README.md sha256:0; edit the Portuguese source first -->
+<!-- mirror of orquestrador/README.md sha256:4e73b91605f12790fd506d17f12075436291294b8e9989560a3e306d25bd63dd; edit the Portuguese source first -->
 # Orchestrator
 
 The engine that takes a task from triage to merge, decided in ADR 0002
@@ -58,10 +57,14 @@ without the whole log, there is no way to know the spend. The day of the daily c
 
 ## Prices
 
-Prices are from 2026-11-20, in US$ per million tokens. When the vendor's page gave two values, the higher one
-applies. Four models from the ADR's table have no verified price yet (Gemini 3.8 Flash, grok-4.3, GPT-6.2 Sol
-and GPT-6.2 Astra) and so are never called. Meanwhile, triage has no substitute. Filling in a price is a PR
-that cites the source.
+Prices were checked on 2026-11-20, in US$ per million tokens, and the sources are in `roteamento.toml`. When
+the vendor announces a launch price, the later price applies: Gemini 4 Argon's doubles on 2026-12-01, and
+Gemini 3.8 Flash's on 2027-01-01. Changing a price is a PR that cites the source, and the price test changes
+with it.
+
+Three vendors bill the whole call at a more expensive tier when the input is long: Anthropic on Haiku 5.5,
+above 100 thousand tokens; xAI, from 200 thousand; and OpenAI, above 272 thousand. The tier looks at the input
+plus cache reads, and inside it the cache is billed as input, the safe side.
 
 ## Not here yet
 
