@@ -1,0 +1,111 @@
+# Roteamento dos papéis do orquestrador (ADR 0002, decisão 5).
+#
+# Preços em US$ por milhão de tokens. Um modelo sem preço ou sem contexto declarado nunca é chamado:
+# sem preço, o teto de custo não tem como valer. Preencher um preço é um PR que cita a fonte.
+# Valores conferidos em 20/11/2026. Quando a página do fornecedor dava dois preços, vale o maior.
+
+limite_contexto = 0.7  # acima de 70% do contexto do modelo, a chamada vai para outro com contexto maior
+espera_padrao_s = 5    # espera antes da nova tentativa quando o erro não traz retry-after
+espera_maxima_s = 60   # retry-after maior que isto: vai direto ao substituto, sem esperar
+
+[executores]  # papel de agente: o fornecedor do modelo decide a ferramenta que roda no runner
+anthropic = "claude-code"
+openai = "codex"
+
+# --- Modelos -----------------------------------------------------------------------------------------
+
+[modelos.haiku-5-5]
+fornecedor = "anthropic"
+id = "claude-haiku-5-5"
+contexto = 1_000_000
+saida_max = 128_000
+preco = { entrada = 0.10, saida = 0.50, faixa = { acima_de = 100_000, entrada = 0.50, saida = 2.50 } }
+
+[modelos.sonnet-5-5]
+fornecedor = "anthropic"
+id = "claude-sonnet-5-5"
+contexto = 1_000_000
+saida_max = 128_000
+preco = { entrada = 2.00, saida = 10.00, cache_leitura = 0.10 }
+
+[modelos.opus-5-5]
+fornecedor = "anthropic"
+id = "claude-opus-5-5"
+contexto = 1_000_000
+saida_max = 128_000
+preco = { entrada = 4.00, saida = 20.00, cache_leitura = 0.20 }
+
+[modelos.fable-5-2]
+fornecedor = "anthropic"
+id = "claude-fable-5-2"
+contexto = 1_000_000
+saida_max = 128_000
+preco = { entrada = 8.00, saida = 40.00, cache_leitura = 0.20 }
+sem_retencao_zero = true  # exige retenção de 30 dias: fica fora de projeto de cliente com dado pessoal
+
+[modelos.gemini-4-argon]
+fornecedor = "google"
+id = "gemini-4-argon"
+contexto = 1_000_000
+saida_max = 65_000
+preco = { entrada = 4.00, saida = 20.00 }  # o preço de lançamento é menor; vale o de depois
+
+[modelos.gemini-3-8-flash]
+fornecedor = "google"
+id = "gemini-3.8-flash"
+contexto = 1_000_000
+saida_max = 65_000
+# sem preço conferido: não é chamado
+
+[modelos.grok-4-7]
+fornecedor = "xai"
+id = "grok-4.7"
+contexto = 500_000
+preco = { entrada = 2.00, saida = 6.00 }
+
+[modelos.grok-4-3]
+fornecedor = "xai"
+id = "grok-4.3"
+contexto = 1_000_000
+# sem preço conferido: não é chamado
+
+[modelos.gpt-6-2-sol]
+fornecedor = "openai"
+id = "gpt-6.2-sol"
+# sem preço e sem contexto conferidos: não é chamado
+
+[modelos.gpt-6-2-astra]
+fornecedor = "openai"
+id = "gpt-6.2-astra"
+# sem preço e sem contexto conferidos: não é chamado
+
+# --- Papéis ------------------------------------------------------------------------------------------
+# O primeiro candidato é o titular; os outros, os substitutos, na ordem. "humano" encerra a lista: a tarefa
+# para com o rótulo precisa-humano.
+
+[papeis.triagem]
+candidatos = ["haiku-5-5", "gemini-3-8-flash", "grok-4-3"]
+
+[papeis.planejador]
+candidatos = ["fable-5-2", "opus-5-5", "grok-4-7"]
+
+[papeis.implementador_bc]
+agente = true
+candidatos = ["sonnet-5-5", "gpt-6-2-sol", "humano"]
+
+[papeis.implementador_a]
+agente = true
+candidatos = ["opus-5-5", "gpt-6-2-astra", "fable-5-2"]
+
+[papeis.revisor_de_claude]
+revisor = true
+candidatos = ["gemini-4-argon", "grok-4-7", "gpt-6-2-astra"]
+
+[papeis.revisor_de_outro]
+revisor = true
+# a tabela do ADR diz "outro fornecedor que não seja o autor" no 2º substituto: aqui viram os três abaixo
+candidatos = ["opus-5-5", "fable-5-2", "gemini-4-argon", "grok-4-7", "gpt-6-2-astra"]
+
+[papeis.revisor_seguranca]
+revisor = true
+candidatos = ["gemini-4-argon", "opus-5-5", "grok-4-7"]

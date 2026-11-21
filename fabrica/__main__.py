@@ -13,6 +13,7 @@
     python -m fabrica dossie renderizar <dossie.json>
     python -m fabrica preco simular <estimativa.toml> [--orcamento VALOR]
     python -m fabrica preco calibrar <historico.csv>
+    python -m fabrica roteamento [--tokens N] [--autor FORNECEDOR] [--dado-pessoal] [--arquivo roteamento.toml]
 
 Em `classe`, <projeto> é a raiz do repositório. Com --arquivos, cada arquivo conta como modificado:
 remoções e renames só aparecem com --base.
@@ -24,7 +25,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import autoria, classe, dossie, espelho, git, preco, projeto, sincronizar, termos
+from . import autoria, classe, dossie, espelho, git, preco, projeto, roteamento, sincronizar, termos
 from .padroes import normalizar
 
 
@@ -170,6 +171,22 @@ def _preco(a: argparse.Namespace) -> int:
     return 0
 
 
+def _roteamento(a: argparse.Namespace) -> int:
+    r = roteamento.carregar(a.arquivo)
+    print(f"Entrada de {a.tokens} tokens; autor: {a.autor or '-'}; dado pessoal de cliente: "
+          f"{'sim' if a.dado_pessoal else 'não'}")
+    for nome, papel in r.papeis.items():
+        autor = a.autor or ("anthropic" if papel.revisor else None)
+        e = roteamento.escolher(r, nome, roteamento.Tarefa(a.tokens, autor, a.dado_pessoal))
+        ordem = [m.chave + (f" ({r.executor(m)})" if papel.agente else "") for m in e.candidatos]
+        if e.humano_no_fim:
+            ordem.append("humano")
+        print(f"\n{nome}: {' -> '.join(ordem) or 'ninguém'}")
+        for chave, motivo in e.pulados:
+            print(f"  pulado {chave}: {motivo}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="fabrica")
     sub = ap.add_subparsers(dest="comando", required=True)
@@ -213,6 +230,12 @@ def main(argv: list[str] | None = None) -> int:
     pr.add_argument("arquivo", type=Path, help="estimativa .toml (simular) ou histórico .csv (calibrar)")
     pr.add_argument("--orcamento", type=float, help="em simular, escolhe o escopo cujo P80 cabe neste valor")
 
+    ro = sub.add_parser("roteamento", help="mostra, por papel, a ordem dos modelos e quem fica de fora")
+    ro.add_argument("--arquivo", type=Path, default=roteamento.ARQUIVO)
+    ro.add_argument("--tokens", type=int, default=10_000, help="entrada da chamada, em tokens")
+    ro.add_argument("--autor", help="fornecedor do autor do PR (revisores); sem ele, vale anthropic")
+    ro.add_argument("--dado-pessoal", action="store_true", help="projeto de cliente com dado pessoal")
+
     a = ap.parse_args(argv)
     try:
         if a.comando == "sincronizar":
@@ -231,6 +254,8 @@ def main(argv: list[str] | None = None) -> int:
             return _dossie(a)
         if a.comando == "preco":
             return _preco(a)
+        if a.comando == "roteamento":
+            return _roteamento(a)
         d = sincronizar.conferir(a.projeto)
         for rotulo, itens in (("alterado", d.alterados), ("faltando", d.faltando), ("sobrando", d.sobrando)):
             for item in itens:
