@@ -78,7 +78,7 @@ class Registro:
     fornecedor: str
     modelo: str
     tentativa: int
-    resultado: str  # ok, transitorio, recusa, saida_invalida, erro, bloqueada_teto, acima_do_maximo, troca
+    resultado: str  # ok, transitorio, recusa, saida_invalida, truncada, erro, bloqueada_teto, acima_do_maximo, troca
     entrada: int
     saida: int
     cache_leitura: int

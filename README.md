@@ -24,7 +24,7 @@ As decisões de arquitetura ficam em `docs/decisoes/`.
 | `fabrica/` | Sincronização, conferência de deriva, cálculo de classe, checks de autoria e de termos | Não: roda a partir daqui |
 | `descoberta/` | Schema, regras e exemplo fictício do dossiê de descoberta | Não: os dossiês reais ficam fora deste repositório |
 | `precificacao/` | Simulador de preço probabilístico, com estimativa e histórico fictícios | Não |
-| `orquestrador/` | Roteamento de modelos por papel, com preços (o núcleo de custo e de troca está em `fabrica/`) | Não |
+| `orquestrador/` | Roteamento de modelos por papel, com preços (o núcleo de custo e de troca e o cliente da Anthropic estão em `fabrica/`) | Não |
 | `docs/decisoes/` | ADRs da fábrica | Não |
 | `en/` | Espelho em inglês de cada `.md`, com o hash do original | Não |
 
@@ -43,6 +43,7 @@ python -m fabrica espelho carimbar . <arquivo.md>   # grava o hash depois de atu
 python -m fabrica dossie conferir <dossie.json> --portao   # regras e portão da descoberta
 python -m fabrica preco simular <estimativa.toml> --orcamento 25000   # P50, P80, P95 e escopo
 python -m fabrica roteamento [--dado-pessoal] [--autor <fornecedor>]   # quem atende cada papel e quem fica de fora
+python -m fabrica contrato anthropic        # chamada real e mínima à API (precisa de ANTHROPIC_API_KEY)
 ```
 
 Verificação local: `scripts/verificar` (ruff, instalado por `.github/requisitos-ci.txt`, e conferência do
