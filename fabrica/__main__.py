@@ -14,6 +14,7 @@
     python -m fabrica preco simular <estimativa.toml> [--orcamento VALOR]
     python -m fabrica preco calibrar <historico.csv>
     python -m fabrica roteamento [--tokens N] [--autor FORNECEDOR] [--dado-pessoal] [--arquivo roteamento.toml]
+    python -m fabrica contrato anthropic     # chamada real e mínima; precisa de ANTHROPIC_API_KEY
 
 Em `classe`, <projeto> é a raiz do repositório. Com --arquivos, cada arquivo conta como modificado:
 remoções e renames só aparecem com --base.
@@ -236,6 +237,9 @@ def main(argv: list[str] | None = None) -> int:
     ro.add_argument("--autor", help="fornecedor do autor do PR (revisores); sem ele, vale anthropic")
     ro.add_argument("--dado-pessoal", action="store_true", help="projeto de cliente com dado pessoal")
 
+    ct = sub.add_parser("contrato", help="chamada real e mínima à API do fornecedor (gasta menos de US$ 0,001)")
+    ct.add_argument("fornecedor", choices=("anthropic",))
+
     a = ap.parse_args(argv)
     try:
         if a.comando == "sincronizar":
@@ -256,6 +260,9 @@ def main(argv: list[str] | None = None) -> int:
             return _preco(a)
         if a.comando == "roteamento":
             return _roteamento(a)
+        if a.comando == "contrato":
+            from . import contrato  # só aqui: o resto da linha de comando não depende dos clientes
+            return contrato.anthropic()
         d = sincronizar.conferir(a.projeto)
         for rotulo, itens in (("alterado", d.alterados), ("faltando", d.faltando), ("sobrando", d.sobrando)):
             for item in itens:

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from fabrica import chamada, custo, roteamento
 from fabrica.__main__ import main
-from fabrica.chamada import ErroTransitorio, Pedido, PrecisaHumano, Recusa, Resposta
+from fabrica.chamada import ErroTransitorio, Pedido, PrecisaHumano, Recusa, Resposta, SaidaTruncada
 from fabrica.custo import Livro, Registro, TetoAtingido, Tetos, Uso
 from fabrica.roteamento import ErroRoteamento, Tarefa
 
@@ -32,11 +32,28 @@ preco = { entrada = 1, saida = 2 }
 
 
 class ClienteFalso:
-    """Devolve, por modelo, as respostas ou exceções da fila, na ordem, e anota cada chamada."""
+    """Devolve, por modelo, as respostas ou exceções da fila, na ordem, e anota cada chamada.
 
-    def __init__(self, roteiro: dict[str, list]):
+    A contagem devolve `contagens[modelo]` (um número ou uma exceção) ou, sem valor, a estimativa do pedido."""
+
+    def __init__(self, roteiro: dict[str, list], contagens: dict | None = None, sem_cliente: tuple[str, ...] = ()):
         self.roteiro = {k: list(v) for k, v in roteiro.items()}
+        self.contagens = dict(contagens or {})
+        self.sem_cliente = sem_cliente
         self.chamadas: list[tuple[str, int]] = []
+        self.contados: list[str] = []
+
+    def atende(self, modelo):
+        return modelo.fornecedor not in self.sem_cliente
+
+    def contar(self, modelo, pedido):
+        self.contados.append(modelo.chave)
+        valor = self.contagens.get(modelo.chave, pedido.tokens_entrada)
+        if isinstance(valor, list):
+            valor = valor.pop(0)
+        if isinstance(valor, Exception):
+            raise valor
+        return valor
 
     def chamar(self, modelo, pedido, max_saida):
         self.chamadas.append((modelo.chave, max_saida))
@@ -378,6 +395,60 @@ class TestChamada(Base):
         self.assertEqual(len(cliente.chamadas), 1)
         ultimo = self.livro.registros()[-1]
         self.assertEqual((ultimo.resultado, ultimo.custo_usd), ("acima_do_maximo", Decimal("0.820000")))
+
+    def test_fornecedor_sem_cliente_e_pulado_com_o_motivo(self):
+        cliente = ClienteFalso({"grok-4-7": [self.ok()]}, sem_cliente=("anthropic",))
+        r = self.chamar(self.pedido(), cliente)
+        self.assertEqual(r.modelo.chave, "grok-4-7")
+        self.assertEqual(cliente.contados, ["grok-4-7"])
+        cliente = ClienteFalso({}, sem_cliente=("google", "xai", "openai"))
+        with self.assertRaises(PrecisaHumano) as ctx:
+            self.chamar(self.pedido("revisor_de_claude", fornecedor_autor="anthropic"), cliente)
+        self.assertIn("gemini-4-argon: sem cliente para o fornecedor google", ctx.exception.motivos)
+        self.assertEqual(self.livro.registros()[1:], [])  # ninguém foi chamado
+
+    def test_contagem_do_fornecedor_decide_o_limite_do_contexto(self):
+        # A estimativa (10 mil) cabia; a contagem do Fable (800 mil) passa de 70% de 1 milhão.
+        cliente = ClienteFalso({"opus-5-5": [self.ok()]}, contagens={"fable-5-2": 800_000})
+        r = self.chamar(self.pedido(), cliente)
+        self.assertEqual(r.modelo.chave, "opus-5-5")
+        troca = self.livro.registros()[0]
+        self.assertEqual((troca.modelo, troca.resultado), ("fable-5-2", "troca"))
+        self.assertIn("800000 tokens pela contagem do fornecedor", troca.detalhe)
+        self.assertEqual(cliente.chamadas, [("opus-5-5", 16_000)])
+
+    def test_contagem_do_fornecedor_entra_no_custo_maximo(self):
+        self.gasto_previo("3.60")
+        # Com a estimativa: 0,08 + 0,64 = 0,72 caberia. Com a contagem: 0,80 + 0,64 = 1,44 passa de 5.
+        cliente = ClienteFalso({"fable-5-2": [self.ok()]}, contagens={"fable-5-2": 100_000})
+        with self.assertRaises(TetoAtingido):
+            self.chamar(self.pedido(), cliente)
+        self.assertEqual(cliente.chamadas, [])
+
+    def test_conta_uma_vez_por_modelo_e_erro_na_contagem_e_transitorio(self):
+        cliente = ClienteFalso({"fable-5-2": [ErroTransitorio("529"), self.ok()]})
+        self.chamar(self.pedido(), cliente)
+        self.assertEqual(cliente.contados, ["fable-5-2"])
+        cliente = ClienteFalso({"fable-5-2": [self.ok()]}, contagens={"fable-5-2": [ErroTransitorio("529"), 1_000]})
+        self.chamar(self.pedido(), cliente)
+        self.assertEqual(cliente.contados, ["fable-5-2", "fable-5-2"])
+        self.assertEqual(len(cliente.chamadas), 1)
+
+    def test_resposta_que_parou_no_meio_entra_no_gasto(self):
+        parcial = ErroTransitorio("overloaded no meio", uso=Uso(1_000, 200))
+        cliente = ClienteFalso({"fable-5-2": [parcial, self.ok()]})
+        self.chamar(self.pedido(), cliente)
+        transitorio = self.livro.registros()[0]
+        self.assertEqual((transitorio.resultado, transitorio.custo_usd), ("transitorio", Decimal("0.016000")))
+
+    def test_saida_truncada_para_tudo_e_cobra(self):
+        cliente = ClienteFalso({"fable-5-2": [SaidaTruncada("max_tokens", Uso(1_000, 16_000))],
+                                "opus-5-5": [self.ok()]})
+        with self.assertRaises(SaidaTruncada):
+            self.chamar(self.pedido(), cliente)
+        self.assertEqual(cliente.chamadas, [("fable-5-2", 16_000)])
+        ultimo = self.livro.registros()[-1]
+        self.assertEqual((ultimo.resultado, ultimo.custo_usd), ("truncada", Decimal("0.648000")))
 
     def test_papel_de_agente_nao_e_chamada_direta(self):
         with self.assertRaises(ErroRoteamento):

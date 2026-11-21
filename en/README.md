@@ -1,4 +1,4 @@
-<!-- mirror of README.md sha256:6454d76f5ecfec45cb4cf03f761b56b3cd0438d9822441a8c2082cff9d194176; edit the Portuguese source first -->
+<!-- mirror of README.md sha256:8aa7cf1baa11a6a4d864368571b0f9ba9c9098f970d4c0ba1f4752c92f4c5992; edit the Portuguese source first -->
 # project-engineering: the factory
 
 [![ci](https://github.com/rodrigobaran/project-engineering/actions/workflows/ci.yml/badge.svg)](https://github.com/rodrigobaran/project-engineering/actions/workflows/ci.yml)
@@ -25,7 +25,7 @@ Architecture decisions live in `docs/decisoes/`.
 | `fabrica/` | Sync, drift check, class computation, authorship and forbidden-terms checks | No: it runs from here |
 | `descoberta/` | Schema, rules and fictitious example of the discovery dossier | No: real dossiers stay outside this repository |
 | `precificacao/` | Probabilistic pricing simulator, with a fictitious estimate and history | No |
-| `orquestrador/` | Model routing per role, with prices (the cost and failover core lives in `fabrica/`) | No |
+| `orquestrador/` | Model routing per role, with prices (the cost and failover core and the Anthropic client live in `fabrica/`) | No |
 | `docs/decisoes/` | The factory's ADRs | No |
 | `en/` | English mirror of every `.md`, with the hash of the original | No |
 
@@ -44,6 +44,7 @@ python -m fabrica espelho carimbar . <file.md>   # records the hash after updati
 python -m fabrica dossie conferir <dossier.json> --portao   # discovery rules and gate
 python -m fabrica preco simular <estimate.toml> --orcamento 25000   # P50, P80, P95 and scope
 python -m fabrica roteamento [--dado-pessoal] [--autor <vendor>]   # who serves each role and who is left out
+python -m fabrica contrato anthropic        # real, minimal API call (needs ANTHROPIC_API_KEY)
 ```
 
 Local verification: `scripts/verificar` (ruff, installed from `.github/requisitos-ci.txt`, and the check of

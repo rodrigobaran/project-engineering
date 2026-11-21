@@ -252,7 +252,14 @@ def _motivo(r: Roteamento, papel: Papel, modelo: Modelo, tarefa: Tarefa) -> str 
         return f"mesmo fornecedor do autor ({modelo.fornecedor})"
     if tarefa.dado_pessoal_cliente and modelo.sem_retencao_zero:
         return "exige retenção de dados, e o projeto tem dado pessoal de cliente"
-    if tarefa.tokens_entrada > r.limite_contexto * modelo.contexto:
+    return excede_contexto(r, modelo, tarefa.tokens_entrada)
+
+
+def excede_contexto(r: Roteamento, modelo: Modelo, tokens_entrada: int) -> str | None:
+    """O motivo quando a entrada passa do limite do contexto do modelo; None quando cabe."""
+    if modelo.contexto is None:
+        return "sem contexto declarado"
+    if tokens_entrada > r.limite_contexto * modelo.contexto:
         return f"a entrada passa de {r.limite_contexto:%} do contexto ({modelo.contexto} tokens)"
     return None
 

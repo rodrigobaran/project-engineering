@@ -1,0 +1,29 @@
+name: contrato
+
+# Só à mão. Uma chamada real e mínima a cada fornecedor com cliente, pelo mesmo caminho do orquestrador,
+# para conferir que as respostas de teste, montadas a partir da documentação, ainda batem com a API.
+# Tetos fixos de US$ 0,01; a chamada custa menos de US$ 0,001. workflow_dispatch só pode ser disparado por
+# quem tem escrita no repositório, então o secret nunca chega a código de fork.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contrato
+  cancel-in-progress: false
+
+jobs:
+  anthropic:
+    name: contrato (anthropic)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Só biblioteca padrão: o python3 do runner (3.12) basta.
+      - run: python3 -m fabrica contrato anthropic
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
