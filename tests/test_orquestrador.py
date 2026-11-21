@@ -85,10 +85,25 @@ class TestArquivoDaFabrica(Base):
         self.assertEqual({nome: p.candidatos for nome, p in ROTA.papeis.items()}, esperado)
 
     def test_precos_conferidos_e_fable_marcado(self):
-        self.assertEqual(ROTA.modelos["fable-5-2"].preco.entrada, Decimal("8.00"))
-        self.assertEqual(ROTA.modelos["opus-5-5"].preco.saida, Decimal("20.00"))
+        # Partida dobrada: mudar um preço exige mudar o arquivo e este teste, citando a fonte no PR.
+        esperado = {
+            "haiku-5-5": ("0.10", "0.50", None), "sonnet-5-5": ("2.00", "10.00", "0.10"),
+            "opus-5-5": ("4.00", "20.00", "0.20"), "fable-5-2": ("8.00", "40.00", "0.20"),
+            "gemini-4-argon": ("4.00", "20.00", "0.20"), "gemini-3-8-flash": ("1.50", "7.50", "0.15"),
+            "grok-4-7": ("2.00", "6.00", "0.50"), "grok-4-3": ("1.25", "2.50", "0.20"),
+            "gpt-6-2-sol": ("2.00", "10.00", "0.10"), "gpt-6-2-astra": ("8.00", "40.00", "0.40"),
+        }
+        conferido = {k: (str(m.preco.entrada), str(m.preco.saida),
+                         None if m.preco.cache_leitura is None else str(m.preco.cache_leitura))
+                     for k, m in ROTA.modelos.items()}
+        self.assertEqual(conferido, esperado)
         self.assertTrue(ROTA.modelos["fable-5-2"].sem_retencao_zero)
         self.assertEqual([k for k, m in ROTA.modelos.items() if m.sem_retencao_zero], ["fable-5-2"])
+
+    def test_todo_candidato_tem_preco_e_contexto_conferidos(self):
+        sem = [(nome, c) for nome, p in ROTA.papeis.items() for c in p.candidatos if c != "humano"
+               and (ROTA.modelos[c].preco is None or ROTA.modelos[c].contexto is None)]
+        self.assertEqual(sem, [])
 
     def test_papel_de_agente_tem_executor_pelo_fornecedor(self):
         self.assertEqual(ROTA.executor(ROTA.modelos["sonnet-5-5"]), "claude-code")
@@ -161,14 +176,24 @@ class TestEscolha(unittest.TestCase):
         ok, _, _ = self.chaves("planejador", tokens_entrada=350_000)  # exatamente 70% ainda cabe
         self.assertIn("grok-4-7", ok)
 
+    def test_contexto_da_openai_e_a_entrada_maxima(self):
+        ok, _, _ = self.chaves("revisor_de_claude", fornecedor_autor="anthropic", tokens_entrada=645_400)
+        self.assertIn("gpt-6-2-astra", ok)  # 70% de 922 mil
+        ok, pulados, _ = self.chaves("revisor_de_claude", fornecedor_autor="anthropic", tokens_entrada=645_401)
+        self.assertIn("70%", pulados["gpt-6-2-astra"])
+
     def test_sem_preco_nunca_e_chamado(self):
-        ok, pulados, _ = self.chaves("triagem")
-        self.assertEqual(ok, ["haiku-5-5"])
-        self.assertIn("sem preço", pulados["gemini-3-8-flash"])
+        modelos = '[modelos.a]\nfornecedor = "x"\nid = "a"\ncontexto = 10\n'
+        e = roteamento.escolher(_rota('[papeis.p]\ncandidatos = ["a"]\n', modelos), "p", Tarefa(1))
+        self.assertEqual(e.candidatos, ())
+        self.assertIn("sem preço", dict(e.pulados)["a"])
+
+    def test_triagem_tem_os_dois_substitutos(self):
+        self.assertEqual(self.chaves("triagem")[0], ["haiku-5-5", "gemini-3-8-flash", "grok-4-3"])
 
     def test_humano_encerra_a_lista(self):
         ok, _, humano = self.chaves("implementador_bc")
-        self.assertEqual(ok, ["sonnet-5-5"])
+        self.assertEqual(ok, ["sonnet-5-5", "gpt-6-2-sol"])
         self.assertTrue(humano)
 
 
@@ -185,12 +210,32 @@ class TestCusto(Base):
 
     def test_saida_pedida_acima_do_limite_do_modelo_e_cortada(self):
         argon = ROTA.modelos["gemini-4-argon"]
-        self.assertEqual(custo.saida_efetiva(argon, 128_000), 65_000)
+        self.assertEqual(custo.saida_efetiva(argon, 128_000), 65_536)
 
     def test_faixa_de_preco_pela_entrada(self):
         haiku = ROTA.modelos["haiku-5-5"]
         self.assertEqual(custo.custo_maximo(haiku, 100_000, 1), Decimal("0.010001"))  # 100 mil ainda na base
         self.assertEqual(custo.custo_maximo(haiku, 100_001, 1), Decimal("0.050003"))  # 0,50 e 2,50 acima
+
+    def test_faixa_do_xai_vale_a_partir_de_200_mil(self):
+        grok = ROTA.modelos["grok-4-7"]
+        self.assertEqual(custo.custo_maximo(grok, 199_999, 1), Decimal("0.400004"))  # 2 e 6
+        self.assertEqual(custo.custo_maximo(grok, 200_000, 1), Decimal("0.800012"))  # 4 e 12, a chamada toda
+        self.assertEqual(custo.custo_maximo(ROTA.modelos["grok-4-3"], 200_000, 1), Decimal("0.500005"))
+
+    def test_faixa_da_openai_acima_de_272_mil(self):
+        sol = ROTA.modelos["gpt-6-2-sol"]
+        self.assertEqual(custo.custo_maximo(sol, 272_000, 1_000), Decimal("0.554000"))  # 2 e 10
+        self.assertEqual(custo.custo_maximo(sol, 272_001, 1_000), Decimal("1.103004"))  # 4 e 15
+        astra = ROTA.modelos["gpt-6-2-astra"]
+        self.assertEqual(custo.custo_maximo(astra, 272_001, 1_000), Decimal("4.412016"))  # 16 e 60
+
+    def test_cache_conta_para_a_faixa_e_paga_como_entrada_acima_dela(self):
+        grok = ROTA.modelos["grok-4-7"]
+        # 160 mil de entrada somando o cache: base, cache a 0,50
+        self.assertEqual(custo.custo_real(grok, Uso(100_000, 1_000, 60_000)), Decimal("0.236000"))
+        # 210 mil somando o cache: faixa longa, e o cache paga 4 como a entrada
+        self.assertEqual(custo.custo_real(grok, Uso(150_000, 1_000, 60_000)), Decimal("0.852000"))
 
     def test_custo_real_com_cache(self):
         opus = ROTA.modelos["opus-5-5"]
@@ -305,13 +350,25 @@ class TestChamada(Base):
         self.assertEqual(self.resultados(), [("fable-5-2", "erro")])
 
     def test_ninguem_atende_precisa_humano_com_o_motivo_de_cada_um(self):
-        falha = [ErroTransitorio("529"), ErroTransitorio("529")]
-        cliente = ClienteFalso({"haiku-5-5": list(falha)})
+        modelos = ('[modelos.a]\nfornecedor = "anthropic"\nid = "a"\ncontexto = 100000\n'
+                   'preco = { entrada = 1, saida = 2 }\n'
+                   '[modelos.b]\nfornecedor = "google"\nid = "b"\ncontexto = 100000\n')
+        rota = _rota('[papeis.p]\ncandidatos = ["a", "b"]\n', modelos)
+        cliente = ClienteFalso({"a": [ErroTransitorio("529"), ErroTransitorio("529")]})
         with self.assertRaises(PrecisaHumano) as ctx:
-            self.chamar(self.pedido("triagem"), cliente)
+            self.chamar(self.pedido("p"), cliente, rota=rota)
         motivos = " | ".join(ctx.exception.motivos)
-        self.assertIn("gemini-3-8-flash: sem preço", motivos)
-        self.assertIn("haiku-5-5: erro transitório", motivos)
+        self.assertIn("b: sem preço", motivos)
+        self.assertIn("a: erro transitório", motivos)
+
+    def test_triagem_passa_pelos_tres_antes_do_humano(self):
+        falha = [ErroTransitorio("529"), ErroTransitorio("529")]
+        cliente = ClienteFalso({"haiku-5-5": list(falha), "gemini-3-8-flash": list(falha),
+                                "grok-4-3": [ErroTransitorio("503"), self.ok()]})
+        r = self.chamar(self.pedido("triagem", max_saida=1_000), cliente)
+        self.assertEqual(r.modelo.chave, "grok-4-3")
+        self.assertEqual([x for x in self.resultados() if x[1] == "troca"],
+                         [("haiku-5-5", "troca"), ("gemini-3-8-flash", "troca")])
 
     def test_custo_real_acima_do_maximo_para_tudo(self):
         enorme = Resposta({"ok": True}, Uso(100_000, 500))  # declarou 10 mil de entrada; veio 100 mil
@@ -343,7 +400,7 @@ class TestLinhaDeComando(unittest.TestCase):
         texto = saida.getvalue()
         self.assertIn("planejador: opus-5-5 -> grok-4-7", texto)
         self.assertIn("pulado fable-5-2: exige retenção", texto)
-        self.assertIn("implementador_bc: sonnet-5-5 (claude-code) -> humano", texto)
+        self.assertIn("implementador_bc: sonnet-5-5 (claude-code) -> gpt-6-2-sol (codex) -> humano", texto)
 
 
 if __name__ == "__main__":
